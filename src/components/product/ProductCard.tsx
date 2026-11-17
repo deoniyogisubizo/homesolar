@@ -32,7 +32,7 @@ export function ProductCard({
       : product.priceMax;
 
   return (
-    <article className="group relative min-w-0 cursor-pointer border border-transparent transition-all duration-150 hover:ring-2 hover:ring-offset-[3px] hover:ring-[#1a1a1a]/40 focus-within:ring-2 focus-within:ring-offset-[3px] focus-within:ring-[#1a1a1a]/40 active:ring-2 active:ring-offset-[3px] active:ring-[#1a1a1a]/40">
+    <article className="group relative min-w-0 cursor-pointer border border-transparent transition-all duration-150 hover:bg-[#1a1a1a]/5 hover:ring-2 hover:ring-offset-[3px] hover:ring-[#1a1a1a]/30 hover:shadow-[0_8px_24px_rgba(26,26,26,0.08)] focus-within:ring-2 focus-within:ring-offset-[3px] focus-within:ring-[#1a1a1a]/30 focus-within:shadow-[0_8px_24px_rgba(26,26,26,0.08)] active:ring-2 active:ring-offset-[3px] active:ring-[#1a1a1a]/40 active:bg-[#1a1a1a]/10">
       <div className="relative">
         <Link
           href={`/product/${product.slug}`}

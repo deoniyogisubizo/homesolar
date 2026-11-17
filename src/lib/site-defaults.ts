@@ -39,15 +39,9 @@ export const DEFAULT_SITE_CONTENT: SiteContentData = {
           { label: "All Products", href: "/search" },
         ],
       },
-      {
-        label: "Pages",
-        href: "/about-us",
-        children: [
-          { label: "About Us", href: "/about-us" },
-          { label: "Contact Us", href: "/contact" },
-          { label: "FAQs", href: "/faq" },
-        ],
-      },
+      { label: "About Us", href: "/about-us" },
+      { label: "FAQs", href: "/faq" },
+      { label: "Contact Us", href: "/contact" },
     ],
   },
   hero: {

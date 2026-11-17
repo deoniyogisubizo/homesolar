@@ -235,6 +235,7 @@ export function InStock({ title = "Explore Products" }: InStockProps) {
 
   const viewToggle = (
     <div className="flex items-center gap-2">
+      <span className="mr-1 text-[12px] font-bold uppercase tracking-[0.14em] text-muted">Choose view</span>
       <button
         type="button"
         onClick={() => setView("grid")}
@@ -484,7 +485,7 @@ export function InStock({ title = "Explore Products" }: InStockProps) {
                 return (
                   <article
                     key={product.id}
-                    className="group relative w-full max-w-[380px] overflow-hidden rounded-none border border-line bg-white transition-all duration-150 hover:ring-2 hover:ring-offset-[3px] hover:ring-[#1a1a1a]/40"
+                    className="group relative w-full max-w-[380px] overflow-hidden rounded-none border border-line bg-white transition-all duration-150 hover:bg-[#1a1a1a]/5 hover:ring-2 hover:ring-offset-[3px] hover:ring-[#1a1a1a]/30 hover:shadow-[0_8px_24px_rgba(26,26,26,0.08)]"
                   >
                     <Link href={`/product/${product.slug}`} aria-label={product.name} className={`relative block overflow-hidden bg-tile w-full ${imageAspect}`}>
                       <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 320px, 100vw" className="object-cover" />
