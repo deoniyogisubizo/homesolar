@@ -1,0 +1,22 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { getInStockProducts } from "@/lib/data";
+
+export async function GET(request: NextRequest) {
+  try {
+    const params = request.nextUrl.searchParams;
+    const limit = clampNumber(params.get("limit"), 8, 1, 100);
+    const page = clampNumber(params.get("page"), 1, 1, 1000);
+
+    const products = await getInStockProducts(limit, page);
+
+    return NextResponse.json({ ok: true, products, page, limit });
+  } catch {
+    return NextResponse.json({ ok: false, error: "Failed to load products" }, { status: 500 });
+  }
+}
+
+function clampNumber(value: string | null, fallback: number, min: number, max: number) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  if (Number.isNaN(parsed)) return fallback;
+  return Math.min(Math.max(parsed, min), max);
+}
