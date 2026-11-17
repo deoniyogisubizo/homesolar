@@ -190,7 +190,7 @@ export function Header({
               : "pointer-events-none -mb-[48px] -translate-y-1 opacity-0"
           }`}
         >
-          <div className="container-page no-scrollbar flex h-[48px] items-center justify-start gap-6 overflow-x-auto whitespace-nowrap sm:justify-center xl:gap-8">
+          <div className="container-page flex h-[48px] items-center justify-start gap-6 whitespace-nowrap sm:justify-center xl:gap-8">
             {header.nav.map((item) => (
               <div key={item.label} className="group relative flex h-full items-center">
                 <Link

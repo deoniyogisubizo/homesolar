@@ -174,6 +174,23 @@ export async function getAllCategories(): Promise<CategoryType[]> {
   );
 }
 
+export async function getInStockCategories(): Promise<CategoryType[]> {
+  cacheLife("minutes");
+  cacheTag("categories");
+
+  await connectToDatabase();
+  const [categories, counts] = await Promise.all([
+    Category.find(PUBLIC_CATEGORY).sort({ order: 1 }).lean(),
+    publicInStockProductCounts(),
+  ]);
+
+  const countByCategory = new Map(counts.map((row) => [String(row._id), row.count]));
+
+  return categories
+    .map((category) => serializeCategory(category, countByCategory.get(category._id.toString()) ?? 0))
+    .filter((category) => (countByCategory.get(category.id) ?? 0) > 0);
+}
+
 export async function getCategoryBySlug(slug: string): Promise<CategoryType | null> {
   cacheLife("minutes");
   cacheTag("categories", `category-${slug}`);
@@ -257,6 +274,20 @@ export async function getInStockProducts(
     .sort({ stock: -1, bestSellerOrder: 1 })
     .skip((page - 1) * limit)
     .limit(limit)
+    .populate("category")
+    .lean();
+
+  return products.map((product) => withPricing(serializeProduct(product as never), context));
+}
+
+export async function getInStockAllProducts(): Promise<ProductType[]> {
+  cacheLife("minutes");
+  cacheTag("products");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+  const products = await Product.find({ ...PUBLIC_PRODUCT, stock: { $gt: 0 } })
+    .sort({ stock: -1, bestSellerOrder: 1 })
     .populate("category")
     .lean();
 
@@ -564,6 +595,13 @@ export async function getSitemapEntries() {
 async function publicProductCounts() {
   return Product.aggregate<{ _id: unknown; count: number }>([
     { $match: PUBLIC_PRODUCT },
+    { $group: { _id: "$category", count: { $sum: 1 } } },
+  ]);
+}
+
+async function publicInStockProductCounts() {
+  return Product.aggregate<{ _id: unknown; count: number }>([
+    { $match: { ...PUBLIC_PRODUCT, stock: { $gt: 0 } } },
     { $group: { _id: "$category", count: { $sum: 1 } } },
   ]);
 }

@@ -14,6 +14,8 @@ import { Product } from "@/models/Product";
 
 export const metadata = { title: "Edit product" };
 
+const MIN_IMAGE_SLOTS = 4;
+
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   await guardPage("products:write");
   const { id } = await params;
@@ -40,6 +42,22 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     image: entry.image,
   }));
 
+  const productImages = product.images.length
+    ? product.images.map((image) => ({
+        src: image.src,
+        thumbSrc: image.thumbSrc ?? null,
+        alt: image.alt ?? "",
+      }))
+    : [{ src: product.image, thumbSrc: null, alt: product.name }];
+  const imageSlots = [
+    ...productImages,
+    ...Array.from({ length: Math.max(0, MIN_IMAGE_SLOTS - productImages.length) }, () => ({
+      src: "",
+      thumbSrc: null,
+      alt: "",
+    })),
+  ];
+
   const initial: ProductFormValues = {
     id: String(product._id),
     name: product.name,
@@ -56,13 +74,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     detailsIntro: product.detailsIntro ?? "",
     shippingReturns: product.shippingReturns ?? "",
     badge: product.badge ?? null,
-    images: product.images.length
-      ? product.images.map((image) => ({
-          src: image.src,
-          thumbSrc: image.thumbSrc ?? null,
-          alt: image.alt ?? "",
-        }))
-      : [{ src: product.image, thumbSrc: null, alt: product.name }],
+    images: imageSlots,
     cardTitle: product.cardTitle ?? null,
     cardSubtitle: product.cardSubtitle ?? null,
     seoTitle: product.seoTitle ?? "",

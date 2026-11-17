@@ -25,7 +25,7 @@ const updateSchema = z.object({
 
 export async function uploadMediaAction(
   formData: FormData,
-): Promise<ActionResult<{ uploaded: number; errors: string[] }>> {
+): Promise<ActionResult<{ uploaded: number; errors: string[]; items: Array<{ url: string; thumbUrl: string | null; alt: string }> }>> {
   return runAdminAction(async () => {
     await assertSameOrigin();
     const session = await requirePermission("media:write");
@@ -54,12 +54,14 @@ export async function uploadMediaAction(
 
     await connectToDatabase();
     let uploaded = 0;
+    const items: Array<{ url: string; thumbUrl: string | null; alt: string }> = [];
     for (const file of accepted) {
       try {
         const stored = await storeImage(file.buffer, file.mimeType);
+        const alt = defaultAlt || file.name.replace(/\.[^.]+$/, "");
         const document = await Media.create({
           ...stored,
-          alt: defaultAlt || file.name.replace(/\.[^.]+$/, ""),
+          alt,
           originalName: file.name,
           folder,
           tags: [],
@@ -74,6 +76,7 @@ export async function uploadMediaAction(
           after: { url: stored.url, folder },
         });
         uploaded += 1;
+        items.push({ url: stored.url, thumbUrl: stored.thumbUrl, alt });
       } catch (error) {
         errors.push(`${file.name}: ${error instanceof Error ? error.message : "upload failed"}.`);
       }
@@ -81,7 +84,7 @@ export async function uploadMediaAction(
 
     revalidateStorefront(["media"]);
     if (!uploaded && errors.length) return actionError(errors.join(" "));
-    return actionOk({ uploaded, errors });
+    return actionOk({ uploaded, errors, items });
   });
 }
 

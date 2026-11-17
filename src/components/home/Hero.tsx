@@ -159,12 +159,6 @@ export function Hero({
       className="relative"
       aria-roledescription="carousel"
       aria-label="Featured solar solutions"
-      onMouseEnter={pause}
-      onMouseLeave={resume}
-      onFocusCapture={pause}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) resume();
-      }}
     >
       <div className="container-page">
         <div className="grid overflow-visible lg:grid-cols-[minmax(0,1fr)_437px] lg:gap-4">
@@ -222,6 +216,10 @@ export function Hero({
                     <Link
                       href={slide.cta.href}
                       tabIndex={isActive ? 0 : -1}
+                      onMouseEnter={pause}
+                      onMouseLeave={resume}
+                      onFocus={pause}
+                      onBlur={resume}
                       className="mt-5 inline-flex h-[42px] items-center justify-center gap-2 rounded-[5px] bg-orange px-6 text-[10px] font-semibold uppercase tracking-[0.16em] text-white transition-colors hover:bg-orange-bright sm:mt-7 sm:h-[44px] sm:px-8 sm:text-[11px]"
                     >
                       {slide.cta.label}

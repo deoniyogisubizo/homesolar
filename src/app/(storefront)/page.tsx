@@ -13,20 +13,18 @@ import {
   getBestSellingProducts,
   getFeaturedProducts,
   getHeroProductsByCategory,
-  getInStockProducts,
   getSiteContent,
 } from "@/lib/data";
 import type { SiteContentData } from "@/types";
 
 export default async function HomePage() {
   const content = await getSiteContent();
-  const [allCategories, heroProducts, bestSelling, featured, campaign, inStock] = await Promise.all([
+  const [allCategories, heroProducts, bestSelling, featured, campaign] = await Promise.all([
     getAllCategories(),
     getHeroProductsByCategory(),
     getBestSellingProducts(content.bestSelling.mode === "manual" ? content.bestSelling.productIds : []),
     getFeaturedProducts(content.featured.mode === "manual" ? content.featured.productIds : []),
     getActiveCampaignDisplay(),
-    getInStockProducts(8, 1),
   ]);
   const categories = allCategories.filter((category) => category.showOnHome);
 
@@ -50,7 +48,7 @@ export default async function HomePage() {
     ),
     bestSelling: <BestSelling key="bestSelling" content={content.bestSelling} products={bestSelling} />,
     featured: <Featured key="featured" content={content.featured} products={featured} />,
-    inStock: <InStock key="inStock" title="In Stock" initialProducts={inStock} />,
+    inStock: <InStock key="inStock" title="Explore Products" />,
     meet: <Meet key="meet" meet={content.meet} campaign={campaign} />,
     clients: <Clients key="clients" clients={content.clients} />,
   };

@@ -20,6 +20,12 @@ export type ProductFormValues = Omit<ProductInput, "tags" | "highlights"> & {
 
 export type CategoryOption = { id: string; name: string };
 
+const MIN_IMAGE_SLOTS = 4;
+
+function emptyImageSlots(count: number): ProductFormValues["images"] {
+  return Array.from({ length: count }, () => ({ src: "", thumbSrc: null, alt: "" }));
+}
+
 export const EMPTY_PRODUCT: ProductFormValues = {
   name: "",
   pageTitle: null,
@@ -35,7 +41,7 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   detailsIntro: "",
   shippingReturns: "",
   badge: null,
-  images: [{ src: "", thumbSrc: null, alt: "" }],
+  images: emptyImageSlots(MIN_IMAGE_SLOTS),
   cardTitle: null,
   cardSubtitle: null,
   seoTitle: "",
@@ -95,9 +101,17 @@ export function ProductEditor({
   const isNew = !initial.id;
 
   const form = useSectionForm<ProductFormValues, { id: string }>(initial, async (value) => {
-    const { tagsText, highlightsText, ...rest } = value;
+    const { tagsText, highlightsText, images: imageSlots, ...rest } = value;
+    const images = imageSlots
+      .map((image) => ({
+        src: image.src.trim(),
+        thumbSrc: image.thumbSrc?.trim() || null,
+        alt: image.alt.trim(),
+      }))
+      .filter((image) => image.src);
     const result = await saveProductAction({
       ...rest,
+      images,
       tags: tagsText
         .split(",")
         .map((tag) => tag.trim())
@@ -122,6 +136,30 @@ export function ProductEditor({
     const next = [...value.images];
     [next[index], next[target]] = [next[target], next[index]];
     setValue({ ...value, images: next });
+  };
+
+  const distributeUploadedImages = (startIndex: number, urls: string[]) => {
+    if (!urls.length) return;
+    setValue((current) => {
+      const images = current.images.map((image) => ({ ...image }));
+      let cursor = 0;
+
+      if (images[startIndex]) {
+        images[startIndex] = { ...images[startIndex], src: urls[cursor++], thumbSrc: null };
+      }
+
+      for (let position = 0; position < images.length && cursor < urls.length; position += 1) {
+        if (!images[position].src.trim()) {
+          images[position] = { ...images[position], src: urls[cursor++] };
+        }
+      }
+
+      while (cursor < urls.length && images.length < 12) {
+        images.push({ src: urls[cursor++], thumbSrc: null, alt: "" });
+      }
+
+      return { ...current, images };
+    });
   };
 
   return (
@@ -345,21 +383,8 @@ export function ProductEditor({
             <>
               <FormSection
                 title="Product images"
-                description="The first image is the card and product page hero. Up to twelve images."
-                aside={
-                  value.images.length < 12 ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setValue({ ...value, images: [...value.images, { src: "", thumbSrc: null, alt: "" }] })
-                      }
-                      className="inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-admin-line bg-white px-3 text-[12px] font-medium text-ink hover:bg-tile"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add image
-                    </button>
-                  ) : null
-                }
+                description="The first image is the card and product page hero. Upload from your device, take a photo now, or choose from the library. Up to twelve images."
+                fullWidth
               >
                 <div className="space-y-3">
                   {value.images.map((image, index) => (
@@ -400,11 +425,14 @@ export function ProductEditor({
                           </button>
                         </div>
                       </div>
-                      <div className="mt-3 grid gap-3 md:grid-cols-[220px_1fr]">
+                      <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
                         <ImagePicker
                           label="Source"
                           value={image.src}
                           onChange={(src) => updateImage(index, { src })}
+                          folder="products"
+                          allowMultiple
+                          onUploaded={(urls) => distributeUploadedImages(index, urls)}
                           hint={index === 0 ? "Used on product cards." : undefined}
                         />
                         <div className="space-y-3">
@@ -432,6 +460,25 @@ export function ProductEditor({
                       ) : null}
                     </div>
                   ))}
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  {value.images.length < 12 ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setValue({ ...value, images: [...value.images, { src: "", thumbSrc: null, alt: "" }] })
+                      }
+                      className="inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-admin-line bg-white px-3 text-[12px] font-medium text-ink hover:bg-tile"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add another image
+                    </button>
+                  ) : (
+                    <p className="text-[12px] text-admin-muted">Maximum of 12 images reached.</p>
+                  )}
+                  <p className="text-[11px] text-admin-muted">
+                    {value.images.filter((image) => image.src.trim()).length} of 12 used
+                  </p>
                 </div>
                 {fieldError(form, "images") ? <p className="admin-error">{fieldError(form, "images")}</p> : null}
               </FormSection>

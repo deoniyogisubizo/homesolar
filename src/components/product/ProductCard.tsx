@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
 import { ProductCardActions } from "@/components/product/ProductCardActions";
 import { PriceRange } from "@/components/currency/Price";
 import type { Product } from "@/types";
@@ -33,7 +32,7 @@ export function ProductCard({
       : product.priceMax;
 
   return (
-    <article className="group min-w-0">
+    <article className="group relative min-w-0 cursor-pointer border border-transparent transition-all duration-150 hover:ring-2 hover:ring-offset-[3px] hover:ring-[#1a1a1a]/40 focus-within:ring-2 focus-within:ring-offset-[3px] focus-within:ring-[#1a1a1a]/40 active:ring-2 active:ring-offset-[3px] active:ring-[#1a1a1a]/40">
       <div className="relative">
         <Link
           href={`/product/${product.slug}`}
@@ -44,7 +43,7 @@ export function ProductCard({
             src={product.image}
             alt={product.name}
             fill
-            sizes="(min-width: 1440px) 330px, (min-width: 1024px) 25vw, 45vw"
+            sizes="(min-width: 1440px) 280px, (min-width: 1280px) 20vw, (min-width: 1024px) 25vw, 45vw"
             className="object-cover"
           />
           {discountPercent > 0 ? (
@@ -62,26 +61,24 @@ export function ProductCard({
         </div>
       </div>
 
-      <div className="mt-3 text-center">
+      <div className="mt-2 text-left">
         <Link
           href={`/product/${product.slug}`}
-          className="line-clamp-1 text-[15px] font-medium leading-5 text-ink transition-colors hover:text-brand"
+          className="line-clamp-2 text-[13px] font-medium leading-5 text-ink transition-colors hover:text-brand"
         >
           {product.cardTitle ?? product.name}
         </Link>
-        <p className="mt-1.5 flex flex-wrap items-baseline justify-center gap-x-2 text-[15px] font-semibold leading-5 text-ink">
+        <p className="line-clamp-2 text-left text-[11px] font-normal leading-none text-[#555555]">
+          {product.cardSubtitle ?? product.shortDescription ?? product.description}
+        </p>
+        <p className="mt-1 flex flex-wrap items-baseline justify-start gap-x-2 whitespace-nowrap text-[11px] font-bold leading-5 text-ink">
           <PriceRange price={price} priceMax={priceMax} />
           {compareAtPrice && compareAtPrice > price ? (
-            <span className="text-[12px] font-normal text-muted line-through">
+            <span className="text-[9px] font-normal text-muted line-through whitespace-nowrap">
               <PriceRange price={compareAtPrice} />
             </span>
           ) : null}
         </p>
-        <div className="mt-2 flex items-center justify-center gap-0.5 text-orange-bright" aria-label={`Rated ${product.rating} out of 5`}>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Star key={index} className="h-3 w-3" fill="currentColor" strokeWidth={0} />
-          ))}
-        </div>
       </div>
     </article>
   );

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getInStockProducts } from "@/lib/data";
+import { getInStockProducts, getInStockAllProducts } from "@/lib/data";
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,7 +7,12 @@ export async function GET(request: NextRequest) {
     const limit = clampNumber(params.get("limit"), 8, 1, 100);
     const page = clampNumber(params.get("page"), 1, 1, 1000);
 
-    const products = await getInStockProducts(limit, page);
+    let products;
+    if (page === 1 && limit >= 100) {
+      products = await getInStockAllProducts();
+    } else {
+      products = await getInStockProducts(limit, page);
+    }
 
     return NextResponse.json({ ok: true, products, page, limit });
   } catch {

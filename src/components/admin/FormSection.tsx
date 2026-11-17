@@ -3,14 +3,20 @@ export function FormSection({
   description,
   children,
   aside,
+  fullWidth = false,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
   aside?: React.ReactNode;
+  fullWidth?: boolean;
 }) {
   return (
-    <section className="grid gap-4 rounded-[8px] border border-admin-line bg-white p-5 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-6">
+    <section
+      className={`grid gap-4 rounded-[8px] border border-admin-line bg-white p-5 ${
+        fullWidth ? "" : "lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-6"
+      }`}
+    >
       <div className="min-w-0">
         <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
         {description ? <p className="mt-1 text-[12px] text-admin-muted">{description}</p> : null}
