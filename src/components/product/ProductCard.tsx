@@ -36,7 +36,6 @@ export function ProductCard({
       <div className="relative">
         <Link
           href={`/product/${product.slug}`}
-          aria-label={product.name}
           className={`relative block overflow-hidden bg-tile ${imageAspect}`}
         >
           <Image
@@ -47,11 +46,11 @@ export function ProductCard({
             className="object-cover"
           />
           {discountPercent > 0 ? (
-            <span className="absolute left-4 top-4 rounded-[4px] bg-white px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-orange shadow-[0_3px_12px_rgba(1,38,78,0.10)]">
+            <span className="absolute left-4 top-4 rounded-[4px] bg-white px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-gold shadow-[0_3px_12px_rgba(1,38,78,0.10)]">
               {discountPercent}% off
             </span>
           ) : product.badge ? (
-            <span className="absolute left-4 top-4 rounded-[4px] bg-white px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-orange shadow-[0_3px_12px_rgba(1,38,78,0.10)]">
+            <span className="absolute left-4 top-4 rounded-[4px] bg-white px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-gold shadow-[0_3px_12px_rgba(1,38,78,0.10)]">
               {badgeLabels[product.badge]}
             </span>
           ) : null}

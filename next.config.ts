@@ -12,6 +12,19 @@ const securityHeaders = [
   },
 ];
 
+const noindexHeaders = [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
+
+const privatePaths = [
+  "/cart",
+  "/checkout",
+  "/account/:path*",
+  "/order/:path*",
+  "/search",
+  "/wishlist",
+  "/admin/:path*",
+  "/api/:path*",
+];
+
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
@@ -25,7 +38,10 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      ...privatePaths.map((source) => ({ source, headers: noindexHeaders })),
+    ];
   },
 };
 

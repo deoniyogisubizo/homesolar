@@ -21,7 +21,7 @@ export function CampaignCountdown({ endsAt }: { endsAt: string }) {
   }, [endsAt]);
 
   return (
-    <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-orange" aria-live="off">
+    <p className="mt-3 text-[11px] font-semibold tracking-[0.12em] text-orange" aria-live="off">
       {label}
     </p>
   );

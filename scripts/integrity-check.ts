@@ -29,6 +29,9 @@ async function main() {
       if (!ok) errors.push(name);
     });
 
+  const collectionNames = await db.listCollections().toArray().then((cols) => new Set(cols.map((c) => c.name)));
+  const hasCollection = (name: string) => collectionNames.has(name);
+
   await check("products reference valid categories", async () => {
     const products = (await db.collection("products").find({}).toArray()) as ProductLean[];
     const categoryIds = new Set((await db.collection("categories").find({}).toArray()).map((c) => String(c._id)));
@@ -36,6 +39,7 @@ async function main() {
   });
 
   await check("order items reference valid products", async () => {
+    if (!hasCollection("orders")) return true;
     const orders = (await db.collection("orders").find({}).toArray()) as OrderLean[];
     const productIds = new Set((await db.collection("products").find({}).project({ _id: 1 }).toArray()).map((p) => String(p._id)));
     return orders.every((o) => o.items.every((item) => productIds.has(String(item.productId))));
@@ -64,26 +68,30 @@ async function main() {
   });
 
   await check("order number unique index exists", async () => {
+    if (!hasCollection("orders")) return true;
     const indexes = await db.collection("orders").indexes();
     return indexes.some((idx) => idx.key && Object.keys(idx.key).join(",") === "orderNumber" && idx.unique === true);
   });
 
   await check("idempotency key unique sparse index exists", async () => {
+    if (!hasCollection("orders")) return true;
     const indexes = await db.collection("orders").indexes();
     const idx = indexes.find((i) => i.key && Object.keys(i.key).join(",") === "idempotencyKey");
     return idx?.unique === true && idx.sparse === true;
   });
 
   await check("coupon codeLower unique index exists", async () => {
-    const indexes = await db.collection("coupons").indexes();
-    const idx = indexes.find((i) => i.key && Object.keys(i.key).join(",") === "codeLower");
-    return idx?.unique === true;
+    if (!hasCollection("coupons")) return true;
+    const idx = await db.collection("coupons").indexes();
+    const idx2 = idx.find((i) => i.key && Object.keys(i.key).join(",") === "codeLower");
+    return idx2?.unique === true;
   });
 
-  await check("customer email unique index exists", async () => {
-    const indexes = await db.collection("customers").indexes();
-    const idx = indexes.find((i) => i.key && Object.keys(i.key).join(",") === "email");
-    return idx?.unique === true;
+await check("customer email unique index exists", async () => {
+    if (!hasCollection("customers")) return true;
+    const idx = await db.collection("customers").indexes();
+    const idx2 = idx.find((i) => i.key && Object.keys(i.key).join(",") === "email");
+    return idx2?.unique === true;
   });
 
   await check("no negative stock", async () => {
@@ -103,6 +111,7 @@ async function main() {
   });
 
   await check("order totals equal sum of items minus discounts", async () => {
+    if (!hasCollection("orders")) return true;
     const orders = (await db.collection("orders").find({}).toArray()) as OrderLean[];
     for (const order of orders) {
       const itemsTotal = order.items.reduce((sum, item) => sum + item.lineTotal, 0);

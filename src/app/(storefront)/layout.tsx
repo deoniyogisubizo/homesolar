@@ -27,7 +27,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
   return (
     <CurrencyProvider>
-      <Header content={content} brand={{ name: general.storeName, logo: general.logo }} />
+      <Header content={content} brand={{ name: general.storeName, logo: general.logo }} contact={contact} />
       <main className="flex-1">{children}</main>
       <Footer
         content={content}

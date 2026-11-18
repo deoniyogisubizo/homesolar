@@ -1,81 +1,57 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search, UserRound } from "lucide-react";
 import { CurrencySelector } from "@/components/currency/CurrencySelector";
 import { HeaderCounts } from "@/components/layout/HeaderCounts";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import { TopBar } from "@/components/layout/TopBar";
+import type { ContactSettings } from "@/lib/admin/settings-defaults";
 import type { SiteContentData } from "@/types";
 
 export function Header({
   content,
   brand,
+  contact,
 }: {
   content: SiteContentData;
   brand: { name: string; logo: string };
+  contact: ContactSettings;
 }) {
   const { header } = content;
   const pathname = usePathname();
   const isProductPage = pathname?.startsWith("/product/") ?? false;
   const isSearchPage = pathname === "/search" || (pathname?.startsWith("/search/") ?? false);
   const hideNav = isProductPage || isSearchPage;
-  const [searchCollapsed, setSearchCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchCollapsed = false;
   const [navVisible, setNavVisible] = useState(true);
-  const navVisibleRef = useRef(true);
-  const directionAnchor = useRef(0);
-  const SCROLL_DIRECTION_THRESHOLD = 40;
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
-    let frame = 0;
-
-    const update = () => {
-      frame = 0;
-      const currentY = Math.max(0, window.scrollY);
-
-      let nextExpanded = navVisibleRef.current;
-
-      if (currentY <= 24) {
-        nextExpanded = true;
-        directionAnchor.current = currentY;
-      } else {
-        const delta = currentY - directionAnchor.current;
-
-        if (delta >= SCROLL_DIRECTION_THRESHOLD) {
-          nextExpanded = false;
-          directionAnchor.current = currentY;
-        } else if (delta <= -SCROLL_DIRECTION_THRESHOLD) {
-          nextExpanded = true;
-          directionAnchor.current = currentY;
-        }
-      }
-
-      if (nextExpanded !== navVisibleRef.current) {
-        navVisibleRef.current = nextExpanded;
-        setNavVisible(nextExpanded);
-        setSearchCollapsed(!nextExpanded);
-      }
-    };
-
     const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(update);
+      const currentScrollY = window.scrollY;
+      const diff = currentScrollY - lastScrollY.current;
+      if (currentScrollY <= 120) {
+        setNavVisible(true);
+      } else if (diff > 0) {
+        setNavVisible(false);
+      } else if (diff < 0) {
+        setNavVisible(true);
+      }
+      lastScrollY.current = currentScrollY;
     };
-
-    directionAnchor.current = window.scrollY;
     window.addEventListener("scroll", onScroll, { passive: true });
-    frame = window.requestAnimationFrame(update);
-
-    return () => {
-      if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScroll);
-    };
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white">
+      <TopBar contact={contact} brandName={brand.name} />
+
       <div className="container-page lg:hidden">
         <div className="flex h-[66px] items-center justify-between gap-3">
           <div className={`flex items-center ${searchCollapsed ? "gap-1.5" : "gap-0"}`}>
@@ -131,27 +107,28 @@ export function Header({
         ) : null}
       </div>
 
-      <div className={`container-page hidden grid-cols-[1fr_auto_1fr] items-center gap-6 transition-all duration-300 ease-out lg:grid ${navVisible ? "h-[96px]" : "h-[70px]"}`}>
+      <div className={`container-page hidden lg:grid lg:grid-cols-1 lg:grid-rows-[auto_auto] transition-all duration-300 ease-out`}>
+        <div className={`hidden grid-cols-[1fr_auto_1fr] items-center gap-6 transition-all duration-300 ease-out lg:grid ${navVisible ? "h-[96px]" : "h-[70px]"}`}>
         <div className="flex items-center gap-4">
           <CurrencySelector codes={header.currencies} />
           {header.languages.length > 1 ? (
             <>
               <span className="h-4 w-px bg-line" />
-              <span className="flex items-center gap-1 text-[16px] font-semibold uppercase tracking-[0.08em] text-ink">
+              <span className="flex items-center gap-1 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink">
                 {header.language}
                 <ChevronDown className="h-4 w-4" />
               </span>
             </>
           ) : null}
           {header.searchEnabled ? (
-            <form action="/search" className="relative ml-2 hidden items-center md:flex">
+            <form action="/search" onClick={() => setSearchOpen(true)} className="relative ml-2 hidden items-center md:flex">
               <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted" strokeWidth={1.8} />
               <input
                 type="search"
                 name="q"
                 aria-label={header.searchPlaceholder}
                 placeholder={header.searchPlaceholder}
-                className="h-10 w-[210px] rounded-[4px] border border-line bg-white pl-9 pr-4 text-[14px] font-medium text-ink outline-none transition-colors placeholder:font-normal placeholder:text-muted focus:border-brand"
+                className="h-10 w-[210px] rounded-[4px] border border-line bg-white pl-9 pr-4 text-[13px] font-semibold text-ink outline-none transition-colors placeholder:font-normal placeholder:text-muted focus:border-brand"
               />
             </form>
           ) : null}
@@ -171,16 +148,16 @@ export function Header({
         <div className="flex items-center justify-end gap-5">
           <Link
             href="/login"
-            className="hidden items-center gap-2 text-[18px] font-semibold tracking-[0.06em] text-ink transition-colors hover:text-brand lg:flex"
+            className="hidden items-center gap-2 text-[14px] font-semibold tracking-[0.06em] text-ink transition-colors hover:text-brand lg:flex"
           >
             <UserRound className="h-[24px] w-[24px]" strokeWidth={1.8} />
             <span className="hidden xl:inline">{header.accountLabel}</span>
           </Link>
           <HeaderCounts labels={{ wishlist: header.wishlistLabel, cart: header.cartLabel }} />
         </div>
-      </div>
+        </div>
 
-      {hideNav ? null : (
+        {hideNav ? null : (
         <nav
           aria-hidden={!navVisible}
           inert={!navVisible}
@@ -190,12 +167,12 @@ export function Header({
               : "pointer-events-none -mb-[48px] -translate-y-1 opacity-0"
           }`}
         >
-          <div className="container-page flex h-[48px] items-center justify-start gap-6 whitespace-nowrap sm:justify-center xl:gap-8">
+          <div className="flex h-[48px] items-center justify-start gap-6 whitespace-nowrap sm:justify-center xl:gap-8">
             {header.nav.map((item) => (
               <div key={item.label} className="group relative flex h-full items-center">
                 <Link
                   href={item.href}
-                  className="flex items-center gap-1.5 text-[15px] font-semibold tracking-[0.05em] text-ink transition-colors hover:text-brand"
+                  className="flex items-center gap-1.5 text-[13px] font-thin tracking-[0.05em] text-ink transition-colors hover:text-brand"
                 >
                   {item.label}
                   {item.children?.length ? <ChevronDown className="h-4 w-4" strokeWidth={1.9} /> : null}
@@ -218,6 +195,44 @@ export function Header({
           </div>
         </nav>
       )}
+      </div>
+
+      {searchOpen ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Search products"
+        >
+          <form action="/search" method="get" className="w-[min(92vw,560px)] rounded-[6px] border border-line bg-white px-5 py-4 sm:px-6">
+            <label className="flex h-12 w-full items-center gap-2 rounded-[5px] bg-tile px-5">
+              <Search className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.8} />
+              <input
+                type="search"
+                name="q"
+                autoFocus
+                placeholder="Search solar panels, inverters, batteries..."
+                className="h-full min-w-0 flex-1 bg-transparent text-[15px] font-semibold text-ink outline-none placeholder:font-normal placeholder:text-muted"
+              />
+            </label>
+            <div className="mt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="inline-flex h-10 items-center justify-center rounded-[5px] px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-tile"
+              >
+                Close
+              </button>
+              <button
+                type="submit"
+                className="inline-flex h-12 items-center justify-center rounded-[5px] bg-gold px-8 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-gold-dark"
+              >
+                Search
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </header>
   );
 }

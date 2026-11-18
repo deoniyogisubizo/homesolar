@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from "lucide-react";
@@ -10,6 +10,7 @@ import { ImagePicker } from "@/components/admin/ImagePicker";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { SettingsSectionForm, fieldError, useSectionForm } from "@/components/admin/settings/SettingsForm";
 import { ProductPicker, type ProductOption } from "@/components/admin/content/ProductPicker";
+import { BASE_CURRENCY } from "@/lib/calculator";
 import type { ProductInput } from "@/schemas/product";
 
 export type ProductFormValues = Omit<ProductInput, "tags" | "highlights"> & {
@@ -46,6 +47,10 @@ export const EMPTY_PRODUCT: ProductFormValues = {
   cardSubtitle: null,
   seoTitle: "",
   seoDescription: "",
+  noindex: false,
+  brand: "",
+  gtin: "",
+  mpn: "",
   featuredOrder: null,
   bestSellerOrder: null,
   options: { colors: [], sizes: [] },
@@ -77,6 +82,13 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 90);
+}
+
+function seoCounterClass(length: number, min: number, max: number) {
+  if (length === 0) return "text-admin-muted";
+  if (length < min) return "text-warning";
+  if (length > max) return "text-danger";
+  return "text-success";
 }
 
 function lines(value: string) {
@@ -122,6 +134,69 @@ export function ProductEditor({
     return result;
   });
   const { value, setValue } = form;
+
+  const schemaPreview = useMemo(() => {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+    const url = `${siteUrl}/product/${value.slug || "product"}`;
+    const categoryName = categories.find((category) => category.id === value.category)?.name;
+    const hasVariants =
+      value.variants.length > 1 || value.options.colors.length > 0 || value.options.sizes.length > 0;
+    const offerFor = (price: number, stock: number) => ({
+      "@type": "Offer",
+      url,
+      priceCurrency: BASE_CURRENCY,
+      price: price.toFixed(2),
+      availability:
+        stock <= 0
+          ? "https://schema.org/OutOfStock"
+          : stock <= 5
+            ? "https://schema.org/LimitedAvailability"
+            : "https://schema.org/InStock",
+    });
+    const base = {
+      "@context": "https://schema.org",
+      name: value.name || "Product name",
+      ...(value.shortDescription ? { description: value.shortDescription } : {}),
+      ...(value.images[0]?.src ? { image: [value.images[0].src] } : {}),
+      ...(value.brand ? { brand: { "@type": "Brand", name: value.brand } } : {}),
+      ...(value.gtin ? { gtin: value.gtin } : {}),
+      ...(value.mpn ? { mpn: value.mpn } : {}),
+      ...(categoryName ? { category: categoryName } : {}),
+      url,
+    };
+
+    if (!hasVariants) {
+      return {
+        ...base,
+        "@type": "Product",
+        ...(value.variants[0]?.sku ? { sku: value.variants[0].sku } : {}),
+        offers: offerFor(value.price, value.stock),
+      };
+    }
+
+    return {
+      ...base,
+      "@type": "ProductGroup",
+      productGroupID: "product-id",
+      ...(value.options.colors.length || value.options.sizes.length
+        ? {
+            variesBy: [
+              ...(value.options.colors.length ? ["color"] : []),
+              ...(value.options.sizes.length ? ["size"] : []),
+            ],
+          }
+        : {}),
+      hasVariant: value.variants.map((variant) => ({
+        "@type": "Product",
+        name: value.name || "Product name",
+        sku: variant.sku || "SKU",
+        ...(variant.color ? { color: variant.color } : {}),
+        ...(variant.size ? { size: variant.size } : {}),
+        isVariantOf: { "@type": "ProductGroup", "@id": `${url}#product-group` },
+        offers: offerFor(variant.price, variant.stock),
+      })),
+    };
+  }, [categories, value]);
 
   const updateImage = (index: number, patch: Partial<ProductFormValues["images"][number]>) => {
     setValue({
@@ -228,6 +303,12 @@ export function ProductEditor({
                           setValue({ ...value, slug: event.target.value.toLowerCase() });
                         }}
                       />
+                      {initial.id && initial.slug !== value.slug ? (
+                        <p className="admin-help text-warning">
+                          The old address /product/{initial.slug} will redirect here with a 308
+                          response, so existing links keep working.
+                        </p>
+                      ) : null}
                     </Field>
                     <Field label="Category" htmlFor="product-category" error={fieldError(form, "category")}>
                       <select
@@ -1228,35 +1309,109 @@ export function ProductEditor({
           ) : null}
 
           {tab === "seo" ? (
-            <FormSection title="Search engine listing" description="Defaults come from the product name and short description.">
-              <div className="space-y-4">
-                <Field label="SEO title" htmlFor="product-seo-title" error={fieldError(form, "seoTitle")}>
-                  <input
-                    id="product-seo-title"
-                    className="admin-field"
-                    value={value.seoTitle}
-                    onChange={(event) => setValue({ ...value, seoTitle: event.target.value })}
-                  />
-                </Field>
-                <Field label="SEO description" htmlFor="product-seo-description" error={fieldError(form, "seoDescription")}>
-                  <textarea
-                    id="product-seo-description"
-                    className="admin-field admin-textarea"
-                    value={value.seoDescription}
-                    onChange={(event) => setValue({ ...value, seoDescription: event.target.value })}
-                  />
-                </Field>
-                <div className="rounded-[6px] border border-admin-line bg-white p-4">
-                  <p className="text-[12px] text-admin-muted">example.com/product/{value.slug || "product"}</p>
-                  <p className="mt-1 text-[18px] text-brand-deep">
-                    {value.seoTitle || value.pageTitle || value.name || "Product title"}
-                  </p>
-                  <p className="mt-1 text-[12px] leading-5 text-ink">
-                    {value.seoDescription || value.shortDescription || "Add a meta description to improve search previews."}
-                  </p>
+            <>
+              <FormSection title="Search engine listing" description="Defaults come from the product name and short description.">
+                <div className="space-y-4">
+                  <Field label="SEO title" htmlFor="product-seo-title" error={fieldError(form, "seoTitle")}>
+                    <input
+                      id="product-seo-title"
+                      className="admin-field"
+                      value={value.seoTitle}
+                      onChange={(event) => setValue({ ...value, seoTitle: event.target.value })}
+                    />
+                    <p className={`admin-help ${seoCounterClass(value.seoTitle.length, 30, 60)}`}>
+                      {value.seoTitle.length}/60 characters
+                    </p>
+                  </Field>
+                  <Field label="SEO description" htmlFor="product-seo-description" error={fieldError(form, "seoDescription")}>
+                    <textarea
+                      id="product-seo-description"
+                      className="admin-field admin-textarea"
+                      value={value.seoDescription}
+                      onChange={(event) => setValue({ ...value, seoDescription: event.target.value })}
+                    />
+                    <p className={`admin-help ${seoCounterClass(value.seoDescription.length, 70, 160)}`}>
+                      {value.seoDescription.length}/160 characters
+                    </p>
+                  </Field>
+                  <div className="rounded-[6px] border border-admin-line bg-white p-4">
+                    <p className="text-[12px] text-admin-muted">
+                      {process.env.NEXT_PUBLIC_SITE_URL || "https://your-store.example"}/product/
+                      {value.slug || "product"}
+                    </p>
+                    <p className="mt-1 text-[18px] text-brand-deep">
+                      {value.seoTitle || value.pageTitle || value.name || "Product title"}
+                    </p>
+                    <p className="mt-1 text-[12px] leading-5 text-ink">
+                      {value.seoDescription || value.shortDescription || "Add a meta description to improve search previews."}
+                    </p>
+                  </div>
+                  <label className="flex items-start gap-2 text-[13px] text-ink">
+                    <input
+                      type="checkbox"
+                      checked={value.noindex}
+                      onChange={(event) => setValue({ ...value, noindex: event.target.checked })}
+                      className="mt-0.5 h-4 w-4"
+                    />
+                    <span>
+                      Hide from search engines
+                      <span className="mt-0.5 block text-[11px] text-admin-muted">
+                        Adds noindex and removes the product from the sitemap. It stays available from
+                        direct links.
+                      </span>
+                    </span>
+                  </label>
                 </div>
-              </div>
-            </FormSection>
+              </FormSection>
+
+              <FormSection title="Product identifiers" description="Used in Product structured data and the Google Merchant feed.">
+                <FieldGrid columns={3}>
+                  <Field label="Brand" htmlFor="product-brand" error={fieldError(form, "brand")}>
+                    <input
+                      id="product-brand"
+                      className="admin-field"
+                      value={value.brand}
+                      onChange={(event) => setValue({ ...value, brand: event.target.value })}
+                    />
+                  </Field>
+                  <Field
+                    label="GTIN"
+                    htmlFor="product-gtin"
+                    hint="8, 12, 13 or 14 digits."
+                    error={fieldError(form, "gtin")}
+                  >
+                    <input
+                      id="product-gtin"
+                      className="admin-field"
+                      inputMode="numeric"
+                      value={value.gtin}
+                      onChange={(event) => setValue({ ...value, gtin: event.target.value })}
+                    />
+                  </Field>
+                  <Field label="MPN" htmlFor="product-mpn" error={fieldError(form, "mpn")}>
+                    <input
+                      id="product-mpn"
+                      className="admin-field"
+                      value={value.mpn}
+                      onChange={(event) => setValue({ ...value, mpn: event.target.value })}
+                    />
+                  </Field>
+                </FieldGrid>
+                <p className="mt-3 text-[11px] leading-5 text-admin-muted">
+                  When GTIN and MPN are both empty, the feed sends identifier_exists=no instead of
+                  inventing an identifier.
+                </p>
+              </FormSection>
+
+              <FormSection
+                title="Structured data preview"
+                description="List prices from this form. Live markup also applies campaign prices, shipping, ratings and approved reviews."
+              >
+                <pre className="max-h-[420px] overflow-auto rounded-[6px] border border-admin-line bg-canvas p-3 text-[11px] leading-5 text-ink">
+                  {JSON.stringify(schemaPreview, null, 2)}
+                </pre>
+              </FormSection>
+            </>
           ) : null}
         </SettingsSectionForm>
       </div>

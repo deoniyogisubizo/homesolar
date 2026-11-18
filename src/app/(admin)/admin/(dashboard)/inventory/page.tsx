@@ -173,15 +173,8 @@ export default async function InventoryPage({
           bulkOptions={[{ value: "delete", label: "Delete" }]}
           bulkAction={bulkProductsFormAction}
           rowActions={[
-            { label: "Edit", kind: "edit", href: (id) => `/admin/inventory/${id}` },
-            {
-              label: "Delete",
-              kind: "delete",
-              onDelete: (id) =>
-                deleteInventoryAction({ id }).then((r) => {
-                  if (!r.ok) throw new Error(r.error);
-                }),
-            },
+            { label: "Edit", kind: "edit", hrefPrefix: "/admin/inventory" },
+            { label: "Delete", kind: "delete", onDeleteAction: deleteInventoryAction },
           ]}
         />
       </PageBody>

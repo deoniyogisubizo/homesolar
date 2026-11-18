@@ -7,6 +7,7 @@ import { SiteContent } from "@/models/SiteContent";
 import { Page } from "@/models/Page";
 import { assertSameOrigin, requirePermission } from "@/lib/admin/auth";
 import { recordAudit } from "@/lib/admin/audit";
+import { appendSlugHistory } from "@/lib/seo/slug";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { normalizeSiteContent } from "@/lib/site-defaults";
@@ -163,6 +164,16 @@ const pageInputSchema = z.object({
   content: z.string().max(100000).default(""),
   seoTitle: z.string().trim().max(160).default(""),
   seoDescription: z.string().trim().max(320).default(""),
+  noindex: z.boolean().default(false),
+  faqs: z
+    .array(
+      z.object({
+        question: z.string().trim().min(3, "Enter a question.").max(200),
+        answer: z.string().trim().min(3, "Enter an answer.").max(2000),
+      }),
+    )
+    .max(20)
+    .default([]),
   status: z.enum(["draft", "published", "archived"]),
   showInFooter: z.boolean(),
   order: z.coerce.number().int().min(0).max(999),
@@ -192,10 +203,15 @@ export async function savePageAction(input: unknown): Promise<ActionResult<{ id:
       };
       page.title = data.title;
       page.slug = data.slug;
+      if (before.slug !== data.slug) {
+        page.slugHistory = appendSlugHistory(page.slugHistory, before.slug, data.slug);
+      }
       page.excerpt = data.excerpt;
       page.content = cleanContent;
       page.seoTitle = data.seoTitle;
       page.seoDescription = data.seoDescription;
+      page.noindex = data.noindex;
+      page.faqs = data.faqs;
       page.showInFooter = data.showInFooter;
       page.order = data.order;
       if (page.status !== data.status) {
@@ -213,12 +229,13 @@ export async function savePageAction(input: unknown): Promise<ActionResult<{ id:
         before,
         after: { title: page.title, slug: page.slug, status: page.status },
       });
-      revalidateStorefront(["pages", `page-${page.slug}`, "site-content", "footer"]);
+      revalidateStorefront(["pages", `page-${page.slug}`, `page-${before.slug}`, "site-content", "footer"]);
       return actionOk({ id: String(page._id) });
     }
 
     const created = await Page.create({
       ...data,
+      slugHistory: [],
       content: cleanContent,
       publishedAt: data.status === "published" ? new Date() : null,
       archivedAt: data.status === "archived" ? new Date() : null,

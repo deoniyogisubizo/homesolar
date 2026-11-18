@@ -13,6 +13,8 @@ export const categoryInputSchema = z.object({
   active: z.boolean().default(true),
   seoTitle: z.string().trim().max(160).default(""),
   seoDescription: z.string().trim().max(320).default(""),
+  noindex: z.boolean().default(false),
+  googleProductCategory: z.string().trim().max(200).default(""),
 });
 
 export type CategoryInput = z.infer<typeof categoryInputSchema>;

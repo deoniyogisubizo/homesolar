@@ -490,7 +490,7 @@ export function InStock({ title = "Explore Products" }: InStockProps) {
                     <Link href={`/product/${product.slug}`} aria-label={product.name} className={`relative block overflow-hidden bg-tile w-full ${imageAspect}`}>
                       <Image src={product.image} alt={product.name} fill sizes="(min-width: 1024px) 320px, 100vw" className="object-cover" />
                       {product.badge ? (
-                        <span className="absolute left-4 top-4 rounded-[4px] bg-white px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-orange shadow-[0_3px_12px_rgba(1,38,78,0.10)]">
+                        <span className="absolute left-4 top-4 rounded-[4px] bg-white px-3 py-1 text-[9px] font-semibold tracking-[0.12em] text-gold shadow-[0_3px_12px_rgba(1,38,78,0.10)]">
                           {product.badge === "top" ? "Top" : "Sale"}
                         </span>
                       ) : null}

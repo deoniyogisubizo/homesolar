@@ -31,6 +31,8 @@ export default async function EditCategoryPage({ params }: { params: Promise<{ i
     active: category.active ?? true,
     seoTitle: category.seoTitle,
     seoDescription: category.seoDescription,
+    noindex: category.noindex ?? false,
+    googleProductCategory: category.googleProductCategory ?? "",
   };
 
   return (

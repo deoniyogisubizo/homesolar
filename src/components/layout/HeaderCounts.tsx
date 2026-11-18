@@ -54,11 +54,10 @@ export function HeaderCounts({ labels }: { labels: { wishlist: string; cart: str
   }, []);
 
   return (
-    <div className="flex shrink-0 items-center gap-3 text-[17px] font-semibold tracking-[0.05em] text-ink sm:gap-5">
+    <div className="flex shrink-0 items-center gap-3 text-[13px] font-semibold tracking-[0.05em] text-ink sm:gap-5">
       <Link
         href="/wishlist"
         className="group relative flex items-center gap-2 transition-colors hover:text-brand"
-        aria-label={labels.wishlist}
       >
         <span className="relative">
           <Heart className="h-[24px] w-[24px]" strokeWidth={1.8} />
@@ -72,7 +71,6 @@ export function HeaderCounts({ labels }: { labels: { wishlist: string; cart: str
       <Link
         href="/cart"
         className="group relative flex items-center gap-2 transition-colors hover:text-brand"
-        aria-label={labels.cart}
       >
         <span className="relative">
           <ShoppingCart className="h-[25px] w-[25px]" strokeWidth={1.8} />

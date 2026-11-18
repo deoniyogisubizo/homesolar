@@ -75,12 +75,69 @@ export type SmtpSettings = {
   replyTo: string;
 };
 
+export const SEARCH_CRAWLERS = [
+  { key: "googlebot", userAgent: "Googlebot", label: "Googlebot" },
+  { key: "bingbot", userAgent: "Bingbot", label: "Bingbot" },
+  { key: "oaiSearchBot", userAgent: "OAI-SearchBot", label: "OpenAI search" },
+  { key: "chatgptUser", userAgent: "ChatGPT-User", label: "ChatGPT user visits" },
+  { key: "perplexityBot", userAgent: "PerplexityBot", label: "Perplexity search" },
+  { key: "perplexityUser", userAgent: "Perplexity-User", label: "Perplexity user visits" },
+  { key: "claudeSearchBot", userAgent: "Claude-SearchBot", label: "Claude search" },
+  { key: "claudeUser", userAgent: "Claude-User", label: "Claude user visits" },
+] as const;
+
+export const TRAINING_CRAWLERS = [
+  { key: "gptBot", userAgent: "GPTBot", label: "GPTBot" },
+  { key: "claudeBot", userAgent: "ClaudeBot", label: "ClaudeBot" },
+  { key: "googleExtended", userAgent: "Google-Extended", label: "Google-Extended" },
+  { key: "ccBot", userAgent: "CCBot", label: "CCBot" },
+  { key: "applebotExtended", userAgent: "Applebot-Extended", label: "Applebot-Extended" },
+] as const;
+
+export type SearchCrawlerKey = (typeof SEARCH_CRAWLERS)[number]["key"];
+export type TrainingCrawlerKey = (typeof TRAINING_CRAWLERS)[number]["key"];
+
+export type RobotsSettings = {
+  search: Record<SearchCrawlerKey, boolean>;
+  training: Record<TrainingCrawlerKey, boolean>;
+};
+
+export const DEFAULT_ROBOTS_SETTINGS: RobotsSettings = {
+  search: {
+    googlebot: true,
+    bingbot: true,
+    oaiSearchBot: true,
+    chatgptUser: true,
+    perplexityBot: true,
+    perplexityUser: true,
+    claudeSearchBot: true,
+    claudeUser: true,
+  },
+  training: {
+    gptBot: false,
+    claudeBot: false,
+    googleExtended: false,
+    ccBot: false,
+    applebotExtended: false,
+  },
+};
+
 export type SeoSettings = {
   titleTemplate: string;
   metaDescription: string;
   ogImage: string;
   indexable: boolean;
   sitemapEnabled: boolean;
+  llmsSummary: string;
+  legalName: string;
+  geoLatitude: string;
+  geoLongitude: string;
+  openingHours: string;
+  googleSiteVerification: string;
+  bingSiteVerification: string;
+  indexNowEnabled: boolean;
+  robots: RobotsSettings;
+  sitemapGeneratedAt: string;
 };
 
 export type NewsletterSettings = {
@@ -131,9 +188,9 @@ export const DEFAULT_SETTINGS: SettingsMap = {
     maintenanceMessage: "We are updating the store. Please check back shortly.",
   },
   contact: {
-    primaryPhone: "+250788123456",
-    secondaryPhone: "",
-    whatsappNumber: "+250788123456",
+    primaryPhone: "0783110111",
+    secondaryPhone: "+250788835517",
+    whatsappNumber: "+250783110111",
     supportEmail: "info@solarhometech.rw",
     salesEmail: "info@solarhometech.rw",
     address: "123 Renewable Energy Way, Kigali, RW",
@@ -186,6 +243,17 @@ export const DEFAULT_SETTINGS: SettingsMap = {
     ogImage: "/images/campaign/hero.jpg",
     indexable: true,
     sitemapEnabled: true,
+    llmsSummary:
+      "Solar Home System & Electronic supplies solar panels, inverters, batteries, lighting, water-heating systems and installation accessories for homes and businesses in Rwanda.",
+    legalName: "Solar Home System & Electronic",
+    geoLatitude: "",
+    geoLongitude: "",
+    openingHours: "Mo-Sa 08:00-18:00",
+    googleSiteVerification: "",
+    bingSiteVerification: "",
+    indexNowEnabled: false,
+    robots: DEFAULT_ROBOTS_SETTINGS,
+    sitemapGeneratedAt: "",
   },
   newsletter: {
     doubleOptIn: false,

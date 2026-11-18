@@ -165,7 +165,7 @@ export function RegisterForm() {
       <div className="flex items-start gap-2">
         <input type="checkbox" id="terms" required className="mt-1 h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand" />
         <label htmlFor="terms" className="text-[12px] text-gray-500">
-          I agree to the <Link href="/terms" className="text-brand hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-brand hover:underline">Privacy Policy</Link>
+          I agree to the <Link href="/terms-and-conditions" className="text-brand hover:underline">Terms &amp; Conditions</Link> and <Link href="/privacy-policy" className="text-brand hover:underline">Privacy Policy</Link>
         </label>
       </div>
     </form>

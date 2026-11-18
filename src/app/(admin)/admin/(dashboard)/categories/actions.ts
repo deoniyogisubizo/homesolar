@@ -7,6 +7,7 @@ import { Category } from "@/models/Category";
 import { Product } from "@/models/Product";
 import { assertSameOrigin, requirePermission } from "@/lib/admin/auth";
 import { recordAudit } from "@/lib/admin/audit";
+import { appendSlugHistory } from "@/lib/seo/slug";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { categoryBulkDeleteSchema, categoryInputSchema } from "@/schemas/catalog";
@@ -38,6 +39,9 @@ export async function saveCategoryAction(input: unknown): Promise<ActionResult<{
       };
       category.name = data.name;
       category.slug = data.slug;
+      if (before.slug !== data.slug) {
+        category.slugHistory = appendSlugHistory(category.slugHistory, before.slug, data.slug);
+      }
       category.description = data.description;
       category.image = data.image;
       category.bannerImage = data.bannerImage;
@@ -46,6 +50,8 @@ export async function saveCategoryAction(input: unknown): Promise<ActionResult<{
       category.active = data.active;
       category.seoTitle = data.seoTitle;
       category.seoDescription = data.seoDescription;
+      category.noindex = data.noindex;
+      category.googleProductCategory = data.googleProductCategory;
       await category.save();
 
       await recordAudit({
@@ -67,7 +73,7 @@ export async function saveCategoryAction(input: unknown): Promise<ActionResult<{
       return actionOk({ id: String(category._id) });
     }
 
-    const created = await Category.create(data);
+    const created = await Category.create({ ...data, slugHistory: [] });
     await recordAudit({
       actor: session,
       action: "create",

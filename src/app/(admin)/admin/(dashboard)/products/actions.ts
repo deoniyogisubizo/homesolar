@@ -7,6 +7,7 @@ import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
 import { assertSameOrigin, requirePermission } from "@/lib/admin/auth";
 import { recordAudit } from "@/lib/admin/audit";
+import { appendSlugHistory } from "@/lib/seo/slug";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { parseCsv } from "@/lib/csv";
@@ -62,6 +63,10 @@ export async function saveProductAction(input: unknown): Promise<ActionResult<{ 
       tags: data.tags,
       seoTitle: data.seoTitle,
       seoDescription: data.seoDescription,
+      noindex: data.noindex,
+      brand: data.brand,
+      gtin: data.gtin,
+      mpn: data.mpn,
       lowStockThreshold: data.lowStockThreshold,
       description: data.description,
       shortDescription: data.shortDescription,
@@ -93,6 +98,7 @@ export async function saveProductAction(input: unknown): Promise<ActionResult<{ 
     if (data.id) {
       const product = await Product.findById(data.id);
       if (!product) return actionError("Product not found.");
+      const previousSlug = product.slug;
       const before = {
         name: product.name,
         slug: product.slug,
@@ -101,6 +107,9 @@ export async function saveProductAction(input: unknown): Promise<ActionResult<{ 
         publishStatus: product.publishStatus,
       };
       product.set(common);
+      if (previousSlug !== data.slug) {
+        product.slugHistory = appendSlugHistory(product.slugHistory, previousSlug, data.slug);
+      }
       await product.save();
 
       await recordAudit({
@@ -121,6 +130,7 @@ export async function saveProductAction(input: unknown): Promise<ActionResult<{ 
       revalidateStorefront([
         "products",
         `product-${product.slug}`,
+        `product-${previousSlug}`,
         "homepage",
         "categories",
         "campaigns",
@@ -129,7 +139,7 @@ export async function saveProductAction(input: unknown): Promise<ActionResult<{ 
       return actionOk({ id: String(product._id) });
     }
 
-    const created = await Product.create(common);
+    const created = await Product.create({ ...common, slugHistory: [] });
     await recordAudit({
       actor: session,
       action: "create",

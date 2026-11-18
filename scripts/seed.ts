@@ -11,6 +11,7 @@ import { AdminUser } from "../src/models/AdminUser";
 import { Setting } from "../src/models/Setting";
 import { EmailTemplate } from "../src/models/EmailTemplate";
 import { Location } from "../src/models/Location";
+import { Page } from "../src/models/Page";
 import { RWANDA_PROVINCES } from "../src/lib/rwanda-locations";
 import { DEFAULT_SETTINGS } from "../src/lib/admin/settings-defaults";
 import { DEFAULT_EMAIL_TEMPLATES } from "../src/lib/emails/templates";
@@ -968,12 +969,12 @@ const siteContent: SiteContentData = {
   clients: {
     title: "The Best Clients",
     logos: [
-      { name: "Solar & Energy", image: "/images/clients/client-1.png", href: "#" },
-      { name: "Green Power", image: "/images/clients/client-2.png", href: "#" },
-      { name: "EcoSolar", image: "/images/clients/client-3.png", href: "#" },
-      { name: "SunTech", image: "/images/clients/client-4.png", href: "#" },
-      { name: "SolMax", image: "/images/clients/client-5.png", href: "#" },
-      { name: "PowerGreen", image: "/images/clients/client-6.png", href: "#" },
+      { name: "Nyarugenge Service Center", image: "/images/clients/client-1.png", href: "#" },
+      { name: "Gasabo Solar Cooperative", image: "/images/clients/client-2.png", href: "#" },
+      { name: "Kicukiro Electricians", image: "/images/clients/client-3.png", href: "#" },
+      { name: "Nyamirambo Installers", image: "/images/clients/client-4.png", href: "#" },
+      { name: "Remera Renewables", image: "/images/clients/client-5.png", href: "#" },
+      { name: "Kigali Heights Homes", image: "/images/clients/client-6.png", href: "#" },
     ],
   },
   settings: {
@@ -981,7 +982,7 @@ const siteContent: SiteContentData = {
   },
   footer: {
     address: "123 Renewable Energy Way, Kigali, RW",
-    phone: "+250 788 123 456",
+    phone: "+250 783 110 111",
     email: "info@solarhometech.rw",
     socials: [
       { platform: "facebook", label: "Facebook", href: "#" },
@@ -994,21 +995,20 @@ const siteContent: SiteContentData = {
       {
         title: "About Us",
         links: [
-          { label: "About Us", href: "#" },
-          { label: "Our Blog", href: "#" },
-          { label: "FAQs", href: "#" },
-          { label: "Contact Us", href: "#" },
-          { label: "Terms & Conditions", href: "#" },
+          { label: "About Us", href: "/about-us" },
+          { label: "FAQs", href: "/faq" },
+          { label: "Contact Us", href: "/contact" },
+          { label: "Shipping & Delivery", href: "/shipping-and-delivery" },
+          { label: "Terms & Conditions", href: "/terms-and-conditions" },
         ],
       },
       {
         title: "Customer Service",
         links: [
-          { label: "Shipping & Delivery", href: "#" },
-          { label: "Returns & Refunds", href: "#" },
-          { label: "Warranty", href: "#" },
-          { label: "Privacy Policy", href: "#" },
-          { label: "Terms & Conditions", href: "#" },
+          { label: "Returns & Refunds", href: "/returns-and-refunds" },
+          { label: "Warranty", href: "/warranty" },
+          { label: "Privacy Policy", href: "/privacy-policy" },
+          { label: "Terms & Conditions", href: "/terms-and-conditions" },
         ],
       },
     ],
@@ -1037,6 +1037,162 @@ const bannerLinesByCategory: Record<string, string[]> = {
   "water-heating": ["HOT WATER", "FROM SUNLIGHT"],
   accessories: ["BUILT FOR", "EVERY INSTALLATION"],
 };
+
+const seedPages = [
+  {
+    title: "About Us",
+    slug: "about-us",
+    excerpt:
+      "Solar Home System & Electronic supplies solar and electrical equipment for homes and businesses in Rwanda.",
+    seoTitle: "About Solar Home System & Electronic",
+    seoDescription:
+      "Learn what Solar Home System & Electronic supplies, who we serve and how to get product advice before you buy.",
+    content: `<p>Solar Home System &amp; Electronic supplies solar panels, inverters, batteries, lighting, water-heating systems and installation accessories for homes and businesses in Rwanda.</p>
+<h2>What we do</h2>
+<p>We help customers choose equipment that matches their energy needs, budget and installation plans. Our catalogue covers complete solar home systems as well as the components needed to extend or repair an existing installation.</p>
+<h2>Who we serve</h2>
+<p>We work with homeowners, renters, shops, offices, installers and small businesses. If you are unsure which panel, inverter or battery suits your load, contact us before ordering so we can check compatibility.</p>
+<h2>How to buy</h2>
+<p>Browse the catalogue, add products to your cart and complete checkout. For orders that need delivery or installation advice, our team will confirm the details with you before dispatch.</p>
+<h2>Contact</h2>
+<p>Our phone, email and business address are shown on the contact page and in the footer of every page.</p>`,
+    faqs: [],
+    order: 1,
+  },
+  {
+    title: "Frequently Asked Questions",
+    slug: "faq",
+    excerpt:
+      "Answers about ordering, delivery, payment, returns, warranty and product compatibility.",
+    seoTitle: "Frequently Asked Questions",
+    seoDescription:
+      "Find answers about ordering, delivery across Rwanda, payment, returns, warranty and choosing compatible solar equipment.",
+    content: `<p>These are the questions customers ask most often. If your question is not covered here, contact our team and include your order number when you have one.</p>`,
+    faqs: [
+      {
+        question: "How do I place an order?",
+        answer:
+          "Add the products you need to your cart, choose your delivery location at checkout and submit the order. Our team will contact you to confirm the details before dispatch.",
+      },
+      {
+        question: "Which payment methods can I use?",
+        answer:
+          "Available payment methods are shown at checkout and may include cash on delivery, mobile money or card payment. The options shown at checkout are the ones currently available for your order.",
+      },
+      {
+        question: "Do you deliver outside Kigali?",
+        answer:
+          "Yes. Delivery is available to districts across Rwanda. The delivery fee and estimated time depend on the destination and are confirmed during checkout.",
+      },
+      {
+        question: "How long does delivery take?",
+        answer:
+          "Kigali deliveries usually arrive within 1 to 2 business days. Other provinces usually take 2 to 4 business days. These estimates can change during busy periods or when a product needs to be transferred between locations.",
+      },
+      {
+        question: "What happens if a product arrives damaged or incorrect?",
+        answer:
+          "Contact us within 30 days of delivery with your order number and photos of the item and packaging. We will arrange a replacement, repair or refund after checking the issue.",
+      },
+      {
+        question: "Can I return a product I no longer need?",
+        answer:
+          "Unused products in their original packaging can be returned within 30 days, subject to inspection. Delivery fees are non-refundable unless the return is due to our error or a faulty product.",
+      },
+      {
+        question: "Is installation included?",
+        answer:
+          "Installation is not automatically included with every product. If you need installation, contact us before ordering so we can confirm whether it is available in your area and what it costs.",
+      },
+      {
+        question: "How do I check whether panels, batteries and inverters are compatible?",
+        answer:
+          "Send us the panel voltage and current ratings, battery type and inverter model you plan to use. We will check the specifications before you order. Incorrect compatibility can damage equipment and is not covered by warranty.",
+      },
+      {
+        question: "What does the warranty cover?",
+        answer:
+          "Warranty terms depend on the manufacturer and product type. The warranty covers manufacturing defects under normal use. Physical damage, incorrect installation, water damage and unauthorised repairs are not covered.",
+      },
+    ],
+    order: 2,
+  },
+  {
+    title: "Shipping & Delivery",
+    slug: "shipping-and-delivery",
+    excerpt:
+      "Delivery areas, estimated times and shipping fees for orders across Rwanda.",
+    seoTitle: "Shipping & Delivery in Rwanda",
+    seoDescription:
+      "Delivery areas, estimated times and shipping fees for solar equipment orders across Kigali and the provinces of Rwanda.",
+    content: `<h2>Delivery areas</h2>
+<p>We deliver across Rwanda. Delivery options and fees are calculated from the destination you select at checkout.</p>
+<h2>Estimated delivery times</h2>
+<ul>
+<li>Kigali: 1 to 2 business days.</li>
+<li>Northern, Southern, Eastern and Western provinces: 2 to 4 business days.</li>
+</ul>
+<p>These are estimates, not guarantees. Large items, stock transfers and public holidays can add time. Our team will contact you if a delay affects your order.</p>
+<h2>Shipping fees</h2>
+<p>Shipping fees depend on the destination. Orders above the free-shipping threshold shown at checkout qualify for free standard delivery. Any fee is displayed before you submit your order.</p>
+<h2>Order confirmation</h2>
+<p>After you order, our team confirms the products, delivery address and payment method. Please make sure the phone number on your order is reachable so the courier can arrange delivery.</p>
+<h2>Receiving your order</h2>
+<p>Check the packaging and contents when they arrive. If something is damaged, missing or incorrect, contact us within 30 days with your order number and photos so we can resolve it.</p>`,
+    faqs: [],
+    order: 3,
+  },
+  {
+    title: "Returns & Refunds",
+    slug: "returns-and-refunds",
+    excerpt:
+      "How to return an item, when a refund applies and what to expect after we receive a return.",
+    seoTitle: "Returns & Refunds",
+    seoDescription:
+      "How to return solar products, when refunds apply, inspection requirements and delivery-fee rules for orders in Rwanda.",
+    content: `<h2>Return window</h2>
+<p>You may return an unused product in its original packaging within 30 days of delivery. Contact us first so we can confirm the return address and whether the item needs to be inspected before collection.</p>
+<h2>Damaged, faulty or incorrect items</h2>
+<p>If a product arrives damaged, faulty or different from what you ordered, contact us within 30 days with your order number and photos. We will arrange a replacement, repair or refund after inspection.</p>
+<h2>Condition requirements</h2>
+<p>Returned products must be unused, complete and in their original packaging with accessories, manuals and labels. Items that have been installed, modified, damaged by incorrect installation or show signs of use may not qualify for a refund.</p>
+<h2>Refund timing</h2>
+<p>Refunds are processed after we receive and inspect the returned product. The time for the money to appear depends on the original payment method and your bank or mobile-money provider.</p>
+<h2>Delivery fees</h2>
+<p>Original delivery fees are non-refundable unless the return is caused by our error or a faulty product. You may be responsible for the cost of returning an item that is not faulty.</p>
+<h2>Warranty claims</h2>
+<p>Faults covered by a manufacturer warranty are handled as warranty claims rather than change-of-mind returns. See the warranty page for details.</p>`,
+    faqs: [],
+    order: 4,
+  },
+  {
+    title: "Warranty",
+    slug: "warranty",
+    excerpt:
+      "How manufacturer warranty claims work, what is covered and how to contact support.",
+    seoTitle: "Product Warranty",
+    seoDescription:
+      "How manufacturer warranty claims work for solar panels, inverters, batteries and accessories, including exclusions and support contacts.",
+    content: `<h2>Warranty coverage</h2>
+<p>Warranty periods and terms are set by the manufacturer and can differ by product. The applicable terms are those supplied with the product or stated on its product page.</p>
+<h2>What is covered</h2>
+<p>A warranty generally covers manufacturing defects that appear during normal use within the warranty period. Keep your order number, product serial number and proof of purchase ready when you contact us.</p>
+<h2>What is not covered</h2>
+<ul>
+<li>Physical damage, cracks, corrosion or water damage caused by accident or misuse.</li>
+<li>Damage from incorrect installation, incorrect wiring, overload or incompatible equipment.</li>
+<li>Normal wear, cosmetic changes that do not affect operation, or damage during unauthorised repair.</li>
+<li>Products that have been modified or used outside the manufacturer's instructions.</li>
+</ul>
+<h2>How to make a claim</h2>
+<p>Contact us with your order number, the product model and serial number, a description of the fault and clear photos. We will check the claim with the manufacturer or supplier and explain the next step.</p>
+<h2>Installation safety</h2>
+<p>Solar equipment should be installed by a qualified electrician or technician. Incorrect installation can be dangerous and may void the warranty.</p>`,
+    faqs: [],
+    order: 5,
+  },
+];
+
 
 async function main() {
   const uri = process.env.MONGODB_URI;
@@ -1174,6 +1330,23 @@ async function main() {
 
   await Review.deleteMany({});
 
+  for (const page of seedPages) {
+    await Page.updateOne(
+      { slug: page.slug },
+      {
+        $setOnInsert: {
+          ...page,
+          slugHistory: [],
+          noindex: false,
+          status: "published",
+          showInFooter: false,
+          publishedAt: new Date(),
+        },
+      },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+  }
+
   // Create admin user if not exists
   const adminEmail = "admin@solarhome.com";
   const existingAdmin = await AdminUser.findOne({ email: adminEmail }).lean();
@@ -1203,6 +1376,7 @@ async function main() {
     locationCount,
     settingCount,
     templateCount,
+    pageCount,
   ] = await Promise.all([
     Category.countDocuments({}),
     Product.countDocuments({}),
@@ -1213,6 +1387,7 @@ async function main() {
     Location.countDocuments({}),
     Setting.countDocuments({}),
     EmailTemplate.countDocuments({}),
+    Page.countDocuments({}),
   ]);
 
   console.log(`categories: ${categoryCount}`);
@@ -1224,6 +1399,7 @@ async function main() {
   console.log(`locations: ${locationCount}`);
   console.log(`settings: ${settingCount}`);
   console.log(`email templates: ${templateCount}`);
+  console.log(`pages: ${pageCount}`);
 
   await mongoose.disconnect();
 }

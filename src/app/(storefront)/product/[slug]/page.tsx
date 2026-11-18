@@ -6,13 +6,24 @@ import { ProductBuyBox } from "@/components/product/ProductBuyBox";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductTabs } from "@/components/product/ProductTabs";
 import { RelatedProducts } from "@/components/product/RelatedProducts";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { getSetting } from "@/lib/admin/settings";
+import { BASE_CURRENCY } from "@/lib/calculator";
 import {
   getProductBySlugOrId,
+  getProductRedirect,
   getProductReviews,
   getProductSlugs,
   getRelatedProducts,
   getSiteContent,
 } from "@/lib/data";
+import { buildBreadcrumbList } from "@/lib/jsonld/breadcrumb";
+import { buildProductJsonLd } from "@/lib/jsonld/product";
+import { getStoreIdentity } from "@/lib/jsonld/store";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { priceString, seoTitle } from "@/lib/seo/text";
+import { absoluteUrl, toAbsoluteUrl } from "@/lib/site";
+import type { Product } from "@/types";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -20,59 +31,94 @@ type ProductPageProps = {
 
 export const instant = false;
 
-const FALLBACK_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
 export async function generateStaticParams() {
   const slugs = await getProductSlugs();
   return slugs.map((slug) => ({ slug }));
 }
 
+async function resolveProduct(slug: string): Promise<Product | null> {
+  const product = await getProductBySlugOrId(slug);
+  if (product) {
+    if (isValidObjectId(slug) && slug !== product.slug) {
+      permanentRedirect(`/product/${product.slug}`);
+    }
+    return product;
+  }
+
+  const target = await getProductRedirect(slug);
+  if (target) permanentRedirect(`/product/${target}`);
+  return null;
+}
+
+function initialVariant(product: Product) {
+  return (
+    product.variants.find((variant) => variant.isDefault) ??
+    product.variants.find((variant) => variant.stock > 0) ??
+    product.variants[0] ??
+    null
+  );
+}
+
+function initialPrice(product: Product): number {
+  const variant = initialVariant(product);
+  const quote = variant ? product.variantPricing?.[variant.sku] : product.pricing;
+  return quote?.effectivePrice ?? variant?.price ?? product.price;
+}
+
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlugOrId(slug);
+  const product = await resolveProduct(slug);
 
-  if (!product) return { title: "Product not found" };
+  if (!product) {
+    return { title: "Product not found", robots: { index: false, follow: false } };
+  }
 
   const image = product.images[0]?.src ?? product.image;
-  const imageUrl = new URL(image, FALLBACK_SITE_URL).toString();
-
-  return {
-    title: product.pageTitle,
-    description: product.shortDescription,
-    alternates: { canonical: `/product/${product.slug}` },
-    openGraph: {
-      type: "website",
-      title: product.pageTitle,
-      description: product.shortDescription,
-      url: `/product/${product.slug}`,
-      images: [{ url: imageUrl, alt: product.images[0]?.alt ?? product.name }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: product.pageTitle,
-      description: product.shortDescription,
-      images: [imageUrl],
-    },
-  };
+  return pageMetadata({
+    title: seoTitle(product.seoTitle || product.pageTitle, product.name),
+    description: product.shortDescription || product.description,
+    path: `/product/${product.slug}`,
+    image,
+    imageAlt: product.images[0]?.alt ?? product.name,
+    ogType: "product",
+    noindex: product.noindex,
+    price: { amount: priceString(initialPrice(product)), currency: BASE_CURRENCY },
+  });
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = await getProductBySlugOrId(slug);
+  const product = await resolveProduct(slug);
 
   if (!product) notFound();
-  if (isValidObjectId(slug) && slug !== product.slug) {
-    permanentRedirect(`/product/${product.slug}`);
-  }
 
-  const [siteContent, reviewPage, relatedProducts] = await Promise.all([
+  const [siteContent, reviewPage, relatedProducts, store, shipping] = await Promise.all([
     getSiteContent(),
     getProductReviews(product.id, 1, 6),
     getRelatedProducts(product.id, product.category.slug, product.relatedProductIds),
+    getStoreIdentity(),
+    getSetting("shipping"),
+  ]);
+
+  const productUrl = toAbsoluteUrl(`/product/${product.slug}`);
+  const productSchema = buildProductJsonLd({
+    product,
+    store,
+    reviews: reviewPage.items,
+    ratingVisible: product.ratingCount > 0 && product.ratingAverage > 0,
+    shippingZones: shipping.zones,
+  });
+  const breadcrumb = buildBreadcrumbList([
+    { name: "Home", url: absoluteUrl("/") },
+    { name: product.category.name, url: toAbsoluteUrl(`/category/${product.category.slug}`) },
+    { name: product.name, url: productUrl },
   ]);
 
   return (
     <div className="container-page pb-16 pt-5 lg:pb-[96px] lg:pt-[30px]">
+      <JsonLd data={productSchema} />
+      <JsonLd data={breadcrumb} />
+
       <nav
         aria-label="Breadcrumb"
         className="mb-6 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-muted lg:mb-[30px] lg:text-[12px]"

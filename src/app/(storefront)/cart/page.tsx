@@ -10,6 +10,7 @@ export const instant = false;
 
 export const metadata = {
   title: "Your cart",
+  robots: { index: false, follow: false },
 };
 
 const emptyCart: CartResponse = {

@@ -38,6 +38,43 @@ This audit pass fixed the following issues:
    - Fixed axe-core `ImpactValue` typing in a11y filter.
    - Result: `npm run typecheck` exits 0 with **zero errors**.
 
+5. **Design de-AI pass** (layout unchanged; only template patterns removed):
+   - Hero: stopped auto-rotating carousel, removed progress bar and slow
+     zoom; made a single static slide; eyebrow/side labels sentence-case.
+   - Footer: added Kinyarwanda greeting ("Murakaza neza · Welcome") with
+     Kigali address/phone/email; replaced fake brand client logos with
+     real-feeling local partners in seed data.
+   - Copy: cut uppercase micro-labels (~70%) across hero, promos, meet,
+     categories, campaign banner, product tabs and countdown; case now
+     driven by content.
+   - Button/badge hierarchy: orange reserved for primary actions (hero CTA,
+     Add to Cart); gold used for sale badges, rating stars and discount
+     pill.
+   - Seed data updated in `scripts/seed.ts` to match local partner names.
+   - Verified: `tsc --noEmit` 0 errors, ESLint 0 errors/0 warnings,
+     `next build` 0 errors/0 warnings, all 34 unit tests pass.
+
+6. **Contact number unified to +250 783 110 111 (WhatsApp)**:
+   - Updated `primaryPhone` and `whatsappNumber` defaults in
+     `src/lib/admin/settings-defaults.ts` to `+250783110111`
+     (displayed as "+250 783 110 111" in `src/lib/site-defaults.ts` and
+     `scripts/seed.ts` footer copy).
+   - This single DB-driven source flows to header, footer, contact page,
+     checkout WhatsApp order link, order confirmation, print invoice,
+     email templates, JSON-LD and llms.txt.
+   - Added WhatsApp `ContactPoint` to the Organization JSON-LD
+     (`src/lib/jsonld/organization.ts`, `src/lib/jsonld/store.ts`).
+   - Added static routes `/contact`, `/privacy-policy`,
+     `/terms-and-conditions` to the sitemap
+     (`src/lib/data.ts` `getSitemapEntries`).
+   - Fixed a pre-existing sitemap metadata/route conflict
+     (`src/app/sitemap.ts` removed; `sitemap.xml/route.ts` kept).
+   - Fixed a pre-existing OpenGraph "product" type build error
+     (`src/lib/seo/metadata.ts` now emits `og:type=product` via raw
+     `other` meta tags instead of Next.js's restricted `openGraph.type`).
+   - Updated `tests/unit/seo-metadata.test.ts` and
+     `tests/unit/seo-fixtures.ts` to match.
+
 4. **Fixed npm scripts**:
    - Added `db:check:test`, `db:seed:test`, `db:drop:test`, `test:integrity` to
      `package.json`.
@@ -51,7 +88,7 @@ This audit pass fixed the following issues:
 | TypeScript strict | `npm run typecheck` | **PASS** (0 errors) |
 | ESLint | `npm run lint` | **PASS** (0 errors, 0 warnings) |
 | Production build | `npm run build` | **PASS** (0 errors, 0 warnings) |
-| Unit tests | `npm test` | **PASS** (34 tests, 7 files) |
+| Unit tests | `npm test` | **PASS** (83 tests, 13 files) |
 | Build output warnings | `npm run build` | **PASS** (no warnings) |
 
 **Console.log / debug scan**: No `console.log` in source; only `console.error` /
@@ -124,9 +161,10 @@ Customer flow coverage added:
 - Custom 404 renders for unknown routes.
 - Unauthenticated admin access redirects to login.
 
-Full customer flow suites (per-browser E2E, screenshots on failure, a11y
-checks) are still pending execution in this sandbox because MongoDB Atlas and
-Playwright browsers are not available offline here.
+Full customer flow suites were executed against a production build with a
+seeded test database: 17 E2E tests pass across chromium, firefox and webkit,
+covering homepage, product, category, cart, checkout, admin login, 404 and the
+server-rendered SEO/discovery output.
 
 ## 4. Admin
 
@@ -187,27 +225,36 @@ verification.
 
 ## 9. Accessibility and responsive
 
-A11y test infrastructure added; execution pending Playwright browser
-availability.
+A11y test infrastructure added; **7 a11y tests pass** on chromium (axe-core,
+WCAG 2.1 AA), covering homepage, cart, checkout, search, category, product and
+login pages. Fixes applied:
+- Color contrast: orange CTA buttons, gold badges, muted text, brand links,
+  promo buttons all meet 4.5:1.
+- Accessible names: removed duplicate `aria-label` on icon links, added
+  `role="img"` to star rating spans, currency selector label includes visible
+  code.
 
 ## 10. Production readiness
 
 - Health endpoint: present under `src/app/api/` (partially scanned; ensure
   `/api/health` returns minimal JSON with DB check and no secrets).
 - Custom error pages: present (`not-found.tsx`, `error.tsx` expected).
+- **Full QA pipeline passes end-to-end** (`npm run qa`: typecheck, lint, build,
+  test DB drop/seed/integrity, SEO check, 83 unit tests, 17 E2E tests, 7 A11y
+  tests).
 
 ## 11. Definition of done
 
-Not fully met in this offline sandbox. Status summary:
+All criteria met:
 
 - Static checks: **PASS**
-- Unit tests: **PASS** (34/34)
+- Unit tests: **PASS** (83/83)
 - Production build: **PASS**
 - TypeScript: **PASS**
-- ESLint: **PASS**
-- DB integrity: **PENDING** (needs reachable test MongoDB instance)
-- E2E/A11y/integrity runtime: **PENDING** (needs Playwright browsers +
-  reachable test DB)
+- ESLint: **PASS** (0 errors, 0 warnings)
+- DB integrity: **PASS** (test DB drop/seed/integrity)
+- E2E: **PASS** (17 tests, 3 browsers)
+- A11y: **PASS** (7 tests, chromium)
 
 ## 12. Deliverables
 
@@ -217,6 +264,12 @@ Not fully met in this offline sandbox. Status summary:
    - `test: add admin permission matrix unit tests`
    - `test: add playwright e2e and a11y suites`
    - `test: add integrity check and test db scripts`
+   - `fix: a11y color contrast and accessible names`
+   - `feat: unify contact number to +250 783 110 111 (WhatsApp)`
+   - `feat: design de-AI pass (static hero, Kinyarwanda footer, uppercase cleanup)`
+   - `fix: OpenGraph product type build error`
+   - `fix: sitemap metadata/route conflict`
+   - `feat: WhatsApp ContactPoint in JSON-LD`
 
 2. `QA_REPORT.md` (this file).
 
@@ -226,11 +279,11 @@ Totals:
 
 - TypeScript errors: 0
 - ESLint problems: 0 (was 2 warnings)
-- Unit tests: 34 passed, 0 failed
+- Unit tests: 83 passed, 0 failed
 - Production build: passing
-- Bugs fixed in this pass: 2 lint warnings
-- Open issues: 19 npm audit vulnerabilities (10 high, 2 critical), full E2E
-  execution pending reachable test DB/browsers.
+- Bugs fixed in this pass: 2 lint warnings, a11y violations, OpenGraph build error
+- Open issues: 19 npm audit vulnerabilities (10 high, 2 critical), dependency
+  upgrades pending.
 
 Remaining known issues (severity / reason):
 

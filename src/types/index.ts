@@ -8,6 +8,7 @@ export type PriceQuote = {
   discountPercent: number;
   campaignId?: string | null;
   campaignName?: string | null;
+  campaignStartsAt?: string | null;
   campaignEndsAt?: string | null;
 };
 
@@ -87,10 +88,15 @@ export type Product = {
   name: string;
   pageTitle: string;
   slug: string;
+  slugHistory: string[];
   publishStatus: PublishStatus;
   tags: string[];
   seoTitle: string;
   seoDescription: string;
+  noindex: boolean;
+  brand: string;
+  gtin: string;
+  mpn: string;
   lowStockThreshold?: number | null;
   description: string;
   shortDescription: string;
@@ -102,6 +108,7 @@ export type Product = {
     id: string;
     name: string;
     slug: string;
+    googleProductCategory: string;
   };
   badge?: ProductBadge | null;
   rating: number;
@@ -131,12 +138,14 @@ export type Product = {
   bestSellerOrder?: number | null;
   pricing?: PriceQuote;
   variantPricing?: Record<string, PriceQuote>;
+  updatedAt: string;
 };
 
 export type Category = {
   id: string;
   name: string;
   slug: string;
+  slugHistory: string[];
   description: string;
   image: string;
   bannerImage: string;
@@ -145,7 +154,28 @@ export type Category = {
   active: boolean;
   seoTitle: string;
   seoDescription: string;
+  noindex: boolean;
+  googleProductCategory: string;
   productCount?: number;
+  updatedAt: string;
+};
+
+export type PageFaq = {
+  question: string;
+  answer: string;
+};
+
+export type StorePage = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  seoTitle: string;
+  seoDescription: string;
+  noindex: boolean;
+  faqs: PageFaq[];
+  updatedAt: string;
 };
 
 export type HeroProduct = {

@@ -49,6 +49,15 @@ export const productInputSchema = z.object({
   cardSubtitle: optionalText(160).default(null),
   seoTitle: z.string().trim().max(160).default(""),
   seoDescription: z.string().trim().max(320).default(""),
+  noindex: z.boolean().default(false),
+  brand: z.string().trim().max(120).default(""),
+  gtin: z
+    .string()
+    .trim()
+    .max(14)
+    .default("")
+    .refine((value) => !value || /^(\d{8}|\d{12,14})$/.test(value), "Use 8, 12, 13 or 14 digits."),
+  mpn: z.string().trim().max(80).default(""),
   featuredOrder: z.preprocess(emptyToNull, z.coerce.number().int().min(0).max(999).nullable()).default(null),
   bestSellerOrder: z.preprocess(emptyToNull, z.coerce.number().int().min(0).max(999).nullable()).default(null),
   options: z

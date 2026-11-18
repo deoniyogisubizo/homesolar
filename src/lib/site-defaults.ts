@@ -148,12 +148,12 @@ export const DEFAULT_SITE_CONTENT: SiteContentData = {
   clients: {
     title: "The Best Clients",
     logos: [
-      { name: "Solar & Energy", image: "/images/clients/client-1.png", href: "#" },
-      { name: "Green Power", image: "/images/clients/client-2.png", href: "#" },
-      { name: "EcoSolar", image: "/images/clients/client-3.png", href: "#" },
-      { name: "SunTech", image: "/images/clients/client-4.png", href: "#" },
-      { name: "SolMax", image: "/images/clients/client-5.png", href: "#" },
-      { name: "PowerGreen", image: "/images/clients/client-6.png", href: "#" },
+      { name: "Nyarugenge Service Center", image: "/images/clients/client-1.png", href: "#" },
+      { name: "Gasabo Solar Cooperative", image: "/images/clients/client-2.png", href: "#" },
+      { name: "Kicukiro Electricians", image: "/images/clients/client-3.png", href: "#" },
+      { name: "Nyamirambo Installers", image: "/images/clients/client-4.png", href: "#" },
+      { name: "Remera Renewables", image: "/images/clients/client-5.png", href: "#" },
+      { name: "Kigali Heights Homes", image: "/images/clients/client-6.png", href: "#" },
     ],
   },
   settings: {
@@ -166,7 +166,7 @@ export const DEFAULT_SITE_CONTENT: SiteContentData = {
   sectionOrder: ["hero", "sale", "promos", "categories", "bestSelling", "featured", "inStock", "meet", "clients"],
   footer: {
     address: "123 Renewable Energy Way, Kigali, RW",
-    phone: "+250 788 123 456",
+    phone: "+250 783 110 111",
     email: "info@solarhometech.rw",
     socials: [
       { platform: "facebook", label: "Facebook", href: "https://facebook.com" },

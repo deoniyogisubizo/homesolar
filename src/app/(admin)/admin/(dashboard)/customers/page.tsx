@@ -144,15 +144,8 @@ export default async function CustomersPage({
           bulkOptions={[{ value: "delete", label: "Delete" }]}
           bulkAction={bulkDeleteCustomersFormAction}
           rowActions={[
-            { label: "Edit", kind: "edit", href: (id) => `/admin/customers/${id}` },
-            {
-              label: "Delete",
-              kind: "delete",
-              onDelete: (id) =>
-                deleteCustomerAction({ id }).then((r) => {
-                  if (!r.ok) throw new Error(r.error);
-                }),
-            },
+            { label: "Edit", kind: "edit", hrefPrefix: "/admin/customers" },
+            { label: "Delete", kind: "delete", onDeleteAction: deleteCustomerAction },
           ]}
         />
       </PageBody>

@@ -1,0 +1,155 @@
+/**
+ * Professional E-Commerce Typography System
+ * Based on industry best practices: 16px-18px body, Regular 400-Medium 500-SemiBold 600/Bold 700 hierarchy
+ * Suitable for desktop-first & responsive e-commerce applications
+ * 
+ * Font recommendations: Inter, Roboto, Lato, or system-ui fallback
+ * Type scale ratio: 1.25 increment for harmonious progression
+ */
+
+:root {
+  /* ============ FONT FAMILY ============ */
+  /* Inter: clean, modern sans-serif with excellent readability */
+  /* Fallback system stack for performance & OS consistency */
+  --font-primary: "Inter", "Roboto", "Lato", "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  
+  /* Optional: serif for luxury/editorial contexts */
+  --font-serif: "Merriweather", "Georgia", "Cambria", "Times New Roman", times, serif;
+  
+  /* ============ TYPE SCALE (1.25 ratio) ============ */
+  /* Scales from 12px base up to 48px heading, following best practices */
+  --type-xs:   0.75rem;   /* 12px  - captions, meta tags */
+  --type-sm:   0.875rem;  /* 14px  - labels, subtitles */
+  --type-base: 1rem;      /* 16px  - body text, paragraphs (primary) */
+  --type-lg:   1.125rem;  /* 18px  - form inputs, detailed text */
+  --type-xl:   1.25rem;   /* 20px  - prices, small CTAs */
+  --type-2xl:  1.5rem;    /* 24px  - H2 section headings */
+  --type-3xl:  1.875rem;  /* 30px  - H1 hero headlines, main titles */
+  --type-4xl:  2.25rem;   /* 36px  - main page headlines */
+  --type-5xl:  3rem;      /* 48px  - hero banners, major promotions */
+  
+  /* ============ FONT WEIGHTS ============ */
+  --font-weight-thin:    100;
+  --font-weight-extralight: 200;
+  --font-weight-light:    300;
+  --font-weight-regular:  400; /* Body copy & descriptions */
+  --font-weight-medium:  500; /* Subheadings, nav, labels */
+  --font-weight-semibold: 600; /* Prices, secondary CTAs */
+  --font-weight-bold:     700; /* Headings, primary CTAs, emphasis */
+  --font-weight-black:    900; /* Rare accent use */
+  
+  /* ============ LINE HEIGHT ============ */
+  /* 1.5x for body for readability; tighter for headlines */
+  --line-height-tight:  1.1;   /* Headings, tight rhythm */
+  --line-height-normal: 1.5;   /* Body text, paragraphs */
+  --line-height-relaxed: 1.6;  /* Long-form text, readability */
+  
+  /* ============ LETTER SPACING ============ */
+  --tracking-tight: -0.025em;   /* Headings, numbers */
+  --tracking-normal:  0em;       /* Default */
+  --tracking-wide:    0.025em;   /* Uppercase, captions */
+  
+  /* ============ TEXT TRANSFORM ============ */
+  --text-uppercase: uppercase;
+  --text-capitalize: capitalize;
+}
+
+/* ============ BASE TYPOGRAPHY CLASSES ============ */
+
+/* Body & Primary Text */
+.body-text {
+  font-family: var(--font-primary);
+  font-size: var(--type-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+/* Subheadings & Secondary Elements */
+.subheading {
+  font-family: var(--font-primary);
+  font-size: var(--type-2xl);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-secondary, #333333);
+}
+
+/* H2 Section Headings */
+.h2-heading {
+  font-family: var(--font-primary);
+  font-size: var(--type-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+/* H1 Hero Headlines */
+.h1-heading {
+  font-family: var(--font-primary);
+  font-size: var(--type-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+/* Prices & Primary CTAs */
+.price-tag,
+.cta-primary {
+  font-family: var(--font-primary);
+  font-size: var(--type-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+/* Form Inputs */
+.form-input {
+  font-family: var(--font-primary);
+  font-size: var(--type-lg);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+/* Captions & Labels */
+.caption,
+.label {
+  font-family: var(--font-primary);
+  font-size: var(--type-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary, #666666);
+}
+
+/* Badges & Secondary Text */
+.badge {
+  font-family: var(--font-primary);
+  font-size: var(--type-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-on-surface, #ffffff);
+  letter-spacing: var(--tracking-wide);
+}
+
+/* ============ RESPONSIVE MODIFICATIONS ============ */
+@media (max-width: 1024px) {
+  :root {
+    /* Slightly smaller scale for tablet comfort */
+    --type-3xl:  2rem;    /* 32px → adjusted for smaller screens */
+    --type-4xl:  2.5rem;  /* 40px → adjusted */
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    /* Mobile-optimized scale - prevent auto-zoom, maintain touch target */
+    --type-xs:   0.625rem;  /* 10px */
+    --type-sm:   0.75rem;   /* 12px */
+    --type-base: 0.875rem;  /* 14px minimum - prevents iOS auto-zoom */
+    --type-lg:   1rem;      /* 16px */
+    --type-xl:   1.125rem;  /* 18px */
+    --type-2xl:  1.25rem;   /* 20px */
+    --type-3xl:  1.5rem;    /* 24px */
+    --type-4xl:  1.875rem;  /* 30px */
+  }
+}

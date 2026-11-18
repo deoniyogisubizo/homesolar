@@ -158,6 +158,7 @@ export function getEffectivePrice(
       discountPercent: 0,
       campaignId: null,
       campaignName: null,
+      campaignStartsAt: null,
       campaignEndsAt: null,
     };
   }
@@ -168,6 +169,7 @@ export function getEffectivePrice(
     discountPercent: quote.discountPercent,
     campaignId: quote.campaign.id,
     campaignName: quote.campaign.name,
+    campaignStartsAt: new Date(quote.campaign.startsAt).toISOString(),
     campaignEndsAt: new Date(quote.campaign.endsAt).toISOString(),
   };
 }

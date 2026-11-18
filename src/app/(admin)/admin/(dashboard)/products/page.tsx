@@ -248,15 +248,8 @@ export default async function ProductsPage({
           ]}
           bulkAction={bulkProductsFormAction}
           rowActions={[
-            { label: "Edit", kind: "edit", href: (id) => `/admin/products/${id}` },
-            {
-              label: "Delete",
-              kind: "delete",
-              onDelete: (id) =>
-                deleteProductAction({ id }).then((r) => {
-                  if (!r.ok) throw new Error(r.error);
-                }),
-            },
+            { label: "Edit", kind: "edit", hrefPrefix: "/admin/products" },
+            { label: "Delete", kind: "delete", onDeleteAction: deleteProductAction },
           ]}
           emptyTitle={hasFilters ? "No products match these filters" : "No products yet"}
           emptyDescription={

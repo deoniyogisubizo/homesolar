@@ -16,7 +16,7 @@ export function Promos({ promos }: { promos: SiteContentData["promos"] }) {
             }`}
           >
             <div className="relative z-10 flex w-[64%] flex-col items-start justify-center px-5 sm:w-[55%] sm:px-8 md:w-[52%] lg:px-10">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-navy/70">{promo.eyebrow}</p>
+              <p className="text-[10px] font-medium tracking-[0.12em] text-navy/70">{promo.eyebrow}</p>
               <h2 className="mt-3 text-[22px] font-semibold uppercase leading-[1.05] tracking-[-0.02em] text-navy sm:text-[26px] lg:text-[30px]">
                 {promo.title}
               </h2>

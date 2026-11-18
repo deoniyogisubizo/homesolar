@@ -81,7 +81,7 @@ export function AuthShell({
           </div>
 
           {tagline ? (
-            <div className="mt-9 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/40">
+            <div className="mt-9 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-300">
               {tagline}
             </div>
           ) : null}

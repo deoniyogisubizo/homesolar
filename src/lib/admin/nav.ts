@@ -83,6 +83,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       },
       { label: "Email", href: "/admin/settings/email", icon: "at-sign", permission: "smtp:read" },
       { label: "SEO", href: "/admin/settings/seo", icon: "search", permission: "seo:read" },
+      { label: "SEO Health", href: "/admin/seo-health", icon: "gauge", permission: "seo:read" },
       { label: "Users and roles", href: "/admin/users", icon: "shield", permission: "users:read" },
       { label: "Audit log", href: "/admin/audit", icon: "history", permission: "audit:read" },
     ],

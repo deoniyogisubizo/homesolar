@@ -79,6 +79,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     cardSubtitle: product.cardSubtitle ?? null,
     seoTitle: product.seoTitle ?? "",
     seoDescription: product.seoDescription ?? "",
+    noindex: product.noindex ?? false,
+    brand: product.brand ?? "",
+    gtin: product.gtin ?? "",
+    mpn: product.mpn ?? "",
     featuredOrder: product.featuredOrder ?? null,
     bestSellerOrder: product.bestSellerOrder ?? null,
     options: {

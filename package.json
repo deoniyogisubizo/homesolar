@@ -15,10 +15,12 @@
     "db:seed:test": "tsx scripts/seed-test.ts",
     "db:drop:test": "tsx scripts/db-drop-test.ts",
     "test:integrity": "tsx scripts/integrity-check.ts",
+    "seo:check": "tsx scripts/seo-check.ts",
+    "seo:check:test": "SEO_CHECK_TEST=1 tsx scripts/seo-check.ts",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test -c playwright.a11y.config.ts",
     "assets": "node scripts/extract-assets.mjs && node scripts/fetch-stock.mjs",
-    "qa": "npm run typecheck && npm run lint && npm run build && npm run db:drop:test && npm run db:seed:test && npm run test:integrity && npm run test && npm run test:e2e && npm run test:a11y"
+    "qa": "npm run typecheck && npm run lint && npm run build && npm run db:drop:test && npm run db:seed:test && npm run test:integrity && npm run seo:check:test && npm run test && npm run test:e2e && npm run test:a11y"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.6",
@@ -56,6 +58,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "schema-dts": "^1.1.5",
     "sharp": "^0.35.5",
     "tailwindcss": "4.3.3",
     "typescript": "^5",

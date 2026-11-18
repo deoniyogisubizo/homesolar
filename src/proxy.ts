@@ -4,8 +4,34 @@ import { createAdminToken, verifyAdminToken } from "@/lib/admin/token";
 const COOKIE_NAME = "homesolar_admin";
 const PUBLIC_PATHS = ["/admin/login", "/admin/forgot-password", "/admin/reset-password"];
 
+function canonicalHost() {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000");
+  } catch {
+    return null;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  const canonical = canonicalHost();
+  if (canonical) {
+    const requestHost = request.headers.get("host")?.split(":")[0]?.toLowerCase();
+    if (requestHost && requestHost === `www.${canonical.hostname.toLowerCase()}`) {
+      const url = request.nextUrl.clone();
+      url.protocol = canonical.protocol;
+      url.host = canonical.host;
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
+  if (pathname !== pathname.toLowerCase()) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.toLowerCase();
+    return NextResponse.redirect(url, 308);
+  }
+
   const isAdminPage = pathname.startsWith("/admin");
   const isAdminApi = pathname.startsWith("/api/admin");
 
@@ -70,5 +96,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/((?!_next|.*\\..*).*)"],
 };

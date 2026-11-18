@@ -6,6 +6,31 @@ import type { ContactSettings } from "@/lib/admin/settings-defaults";
 import { buildWhatsAppLink, normalizePhone } from "@/lib/whatsapp";
 import type { SiteContentData } from "@/types";
 
+const KNOWN_LINK_HREFS: Record<string, string> = {
+  "about us": "/about-us",
+  "faqs": "/faq",
+  "contact us": "/contact",
+  "shipping & delivery": "/shipping-and-delivery",
+  "shipping and delivery": "/shipping-and-delivery",
+  "returns & refunds": "/returns-and-refunds",
+  "returns and refunds": "/returns-and-refunds",
+  "warranty": "/warranty",
+  "terms & conditions": "/terms-and-conditions",
+  "terms and conditions": "/terms-and-conditions",
+  "privacy policy": "/privacy-policy",
+};
+
+function footerHref(link: { label: string; href: string }) {
+  const canonical = KNOWN_LINK_HREFS[link.label.trim().toLowerCase()];
+  const legacyHref =
+    !link.href ||
+    link.href === "#" ||
+    link.href === "/terms" ||
+    link.href === "/privacy";
+  if (canonical && legacyHref) return canonical;
+  return link.href || "#";
+}
+
 export function Footer({
   content,
   contact,
@@ -54,6 +79,9 @@ export function Footer({
                   {contact.supportEmail}
                 </a>
               </p>
+              <p className="mt-3 text-[11px] font-medium tracking-[0.1em] text-white/90 uppercase">
+                Murakaza neza &middot; Welcome
+              </p>
             </div>
 
             <div className="mt-6 flex items-center gap-2">
@@ -88,7 +116,7 @@ export function Footer({
                 {column.links.map((link) => (
                   <li key={link.label}>
                     <Link
-                      href={link.href}
+                      href={footerHref(link)}
                       className="text-[12.5px] text-white/70 transition-colors hover:text-white"
                     >
                       {link.label}

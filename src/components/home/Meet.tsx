@@ -55,10 +55,10 @@ export function Meet({
             </div>
           ) : null}
 
-          <div className="flex min-h-[280px] min-w-0 flex-col justify-center bg-brand-light px-6 py-8 text-navy sm:min-h-[315px] sm:px-10 sm:py-9">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-navy/60">
-              {meet.newsletter.eyebrow}
-            </p>
+<div className="flex min-h-[280px] min-w-0 flex-col justify-center bg-brand-light px-6 py-8 text-navy sm:min-h-[315px] sm:px-10 sm:py-9">
+              <p className="text-[10px] font-medium tracking-[0.12em] text-navy/80">
+                {meet.newsletter.eyebrow}
+              </p>
             <h3 className="mt-2 text-[26px] font-semibold uppercase tracking-[-0.02em] sm:text-[32px]">{meet.newsletter.title}</h3>
             <p className="mt-3 text-[13px] leading-5 text-navy/70">{meet.newsletter.description}</p>
             <NewsletterForm copy={meet.newsletter} />

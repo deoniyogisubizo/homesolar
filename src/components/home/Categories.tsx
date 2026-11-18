@@ -21,7 +21,7 @@ export function Categories({ categories }: { categories: Category[] }) {
               </div>
             </Link>
             <div className="mt-5 sm:mt-7">
-              <h3 className="text-[19px] font-semibold uppercase tracking-[0.04em] text-ink">
+              <h3 className="text-[19px] font-semibold tracking-[-0.02em] text-ink">
                 <Link href={`/category/${category.slug}`}>{category.name}</Link>
               </h3>
               <div className="mt-2">

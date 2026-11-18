@@ -114,12 +114,51 @@ export const smtpSettingsSchema = z.object({
   replyTo: z.union([emailSchema, z.literal("")]),
 });
 
+const coordinate = (limit: number) =>
+  z
+    .string()
+    .trim()
+    .max(20)
+    .default("")
+    .refine(
+      (value) => !value || (Number.isFinite(Number(value)) && Math.abs(Number(value)) <= limit),
+      `Enter a number between -${limit} and ${limit}, or leave blank.`,
+    );
+
 export const seoSettingsSchema = z.object({
   titleTemplate: text(160, 1),
   metaDescription: text(320),
   ogImage: text(500),
   indexable: z.boolean(),
   sitemapEnabled: z.boolean(),
+  llmsSummary: text(600),
+  legalName: text(160),
+  geoLatitude: coordinate(90),
+  geoLongitude: coordinate(180),
+  openingHours: text(160),
+  googleSiteVerification: text(200),
+  bingSiteVerification: text(200),
+  indexNowEnabled: z.boolean(),
+  robots: z.object({
+    search: z.object({
+      googlebot: z.boolean(),
+      bingbot: z.boolean(),
+      oaiSearchBot: z.boolean(),
+      chatgptUser: z.boolean(),
+      perplexityBot: z.boolean(),
+      perplexityUser: z.boolean(),
+      claudeSearchBot: z.boolean(),
+      claudeUser: z.boolean(),
+    }),
+    training: z.object({
+      gptBot: z.boolean(),
+      claudeBot: z.boolean(),
+      googleExtended: z.boolean(),
+      ccBot: z.boolean(),
+      applebotExtended: z.boolean(),
+    }),
+  }),
+  sitemapGeneratedAt: text(40),
 }) satisfies z.ZodType<SettingsMap["seo"]>;
 
 export const newsletterSettingsSchema = z.object({

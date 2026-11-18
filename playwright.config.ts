@@ -6,11 +6,10 @@ export default defineConfig({
   forbidOnly: true,
   retries: 0,
   workers: 1,
-  use: {
+use: {
     baseURL: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
   },
   projects: [
     {
@@ -30,5 +29,6 @@ export default defineConfig({
     command: "npm run start",
     url: "http://localhost:3000",
     timeout: 120000,
+    reuseExistingServer: true,
   },
 });

@@ -12,10 +12,15 @@ export type ProductDocument = {
   name: string;
   pageTitle?: string | null;
   slug: string;
+  slugHistory: string[];
   publishStatus: "draft" | "active" | "archived";
   tags: string[];
   seoTitle: string;
   seoDescription: string;
+  noindex: boolean;
+  brand: string;
+  gtin: string;
+  mpn: string;
   lowStockThreshold?: number | null;
   archivedAt?: Date | null;
   description: string;
@@ -142,6 +147,7 @@ const productSchema = new Schema<ProductDocument>(
     name: { type: String, required: true, trim: true },
     pageTitle: { type: String, default: null, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    slugHistory: { type: [String], default: [] },
     publishStatus: {
       type: String,
       enum: ["draft", "active", "archived"],
@@ -151,6 +157,10 @@ const productSchema = new Schema<ProductDocument>(
     tags: { type: [String], default: [], index: true },
     seoTitle: { type: String, default: "" },
     seoDescription: { type: String, default: "" },
+    noindex: { type: Boolean, default: false },
+    brand: { type: String, default: "", trim: true },
+    gtin: { type: String, default: "", trim: true },
+    mpn: { type: String, default: "", trim: true },
     lowStockThreshold: { type: Number, default: null, min: 0 },
     archivedAt: { type: Date, default: null },
     description: { type: String, required: true },
@@ -198,6 +208,8 @@ const productSchema = new Schema<ProductDocument>(
 productSchema.index({ name: "text", description: "text", shortDescription: "text", tags: "text" });
 productSchema.index({ publishStatus: 1, createdAt: -1 });
 productSchema.index({ publishStatus: 1, category: 1, bestSellerOrder: 1 });
+productSchema.index({ slugHistory: 1 });
+productSchema.index({ "variants.sku": 1 }, { unique: true, sparse: true });
 
 export const Product: Model<ProductDocument> =
   models.Product || model<ProductDocument>("Product", productSchema);

@@ -381,8 +381,8 @@ export default async function OrdersPage({
           bulkOptions={[{ value: "delete", label: "Delete" }]}
           bulkAction={bulkDeleteOrdersFormAction}
           rowActions={[
-            { label: "Edit", kind: "edit", href: (id) => `/admin/orders/${id}` },
-            { label: "Delete", kind: "delete", onDelete: (id) => deleteOrderAction({ id }).then((r) => { if (!r.ok) throw new Error(r.error); }) },
+            { label: "Edit", kind: "edit", hrefPrefix: "/admin/orders" },
+            { label: "Delete", kind: "delete", onDeleteAction: deleteOrderAction },
           ]}
         />
       </PageBody>

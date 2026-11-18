@@ -23,6 +23,8 @@ export type CategoryFormValues = {
   active: boolean;
   seoTitle: string;
   seoDescription: string;
+  noindex: boolean;
+  googleProductCategory: string;
 };
 
 export const EMPTY_CATEGORY: CategoryFormValues = {
@@ -36,7 +38,16 @@ export const EMPTY_CATEGORY: CategoryFormValues = {
   active: true,
   seoTitle: "",
   seoDescription: "",
+  noindex: false,
+  googleProductCategory: "",
 };
+
+function seoCounterClass(length: number, min: number, max: number) {
+  if (length === 0) return "text-admin-muted";
+  if (length < min) return "text-warning";
+  if (length > max) return "text-danger";
+  return "text-success";
+}
 
 function slugify(value: string) {
   return value
@@ -94,6 +105,12 @@ export function CategoryEditor({ initial, productCount }: { initial: CategoryFor
                       setValue({ ...value, slug: event.target.value.toLowerCase() });
                     }}
                   />
+                  {initial.id && initial.slug !== value.slug ? (
+                    <p className="admin-help text-warning">
+                      The old address /category/{initial.slug} will redirect here with a 308
+                      response.
+                    </p>
+                  ) : null}
                 </Field>
               </FieldGrid>
               <Field label="Description" htmlFor="category-description" error={fieldError(form, "description")}>
@@ -155,25 +172,77 @@ export function CategoryEditor({ initial, productCount }: { initial: CategoryFor
             </FieldGrid>
           </FormSection>
 
-          <FormSection title="Search appearance" description="Optional overrides for search engines.">
-            <FieldGrid>
-              <Field label="SEO title" htmlFor="category-seo-title" error={fieldError(form, "seoTitle")}>
+          <FormSection
+            title="Search appearance"
+            description="Optional overrides for search engines and the category page."
+          >
+            <div className="space-y-4">
+              <FieldGrid>
+                <Field label="SEO title" htmlFor="category-seo-title" error={fieldError(form, "seoTitle")}>
+                  <input
+                    id="category-seo-title"
+                    className="admin-field"
+                    value={value.seoTitle}
+                    onChange={(event) => setValue({ ...value, seoTitle: event.target.value })}
+                  />
+                  <p className={`admin-help ${seoCounterClass(value.seoTitle.length, 30, 60)}`}>
+                    {value.seoTitle.length}/60 characters
+                  </p>
+                </Field>
+                <Field label="SEO description" htmlFor="category-seo-description" error={fieldError(form, "seoDescription")}>
+                  <textarea
+                    id="category-seo-description"
+                    className="admin-field admin-textarea min-h-[70px]"
+                    value={value.seoDescription}
+                    onChange={(event) => setValue({ ...value, seoDescription: event.target.value })}
+                  />
+                  <p className={`admin-help ${seoCounterClass(value.seoDescription.length, 70, 160)}`}>
+                    {value.seoDescription.length}/160 characters
+                  </p>
+                </Field>
+              </FieldGrid>
+              <Field
+                label="Google product category"
+                htmlFor="category-google-product-category"
+                hint="Google Merchant taxonomy path or ID, for example Home & Garden > Lighting. Used by every product in this category when a product has no override."
+                error={fieldError(form, "googleProductCategory")}
+              >
                 <input
-                  id="category-seo-title"
+                  id="category-google-product-category"
                   className="admin-field"
-                  value={value.seoTitle}
-                  onChange={(event) => setValue({ ...value, seoTitle: event.target.value })}
+                  value={value.googleProductCategory}
+                  onChange={(event) =>
+                    setValue({ ...value, googleProductCategory: event.target.value })
+                  }
                 />
               </Field>
-              <Field label="SEO description" htmlFor="category-seo-description" error={fieldError(form, "seoDescription")}>
-                <textarea
-                  id="category-seo-description"
-                  className="admin-field admin-textarea min-h-[70px]"
-                  value={value.seoDescription}
-                  onChange={(event) => setValue({ ...value, seoDescription: event.target.value })}
+              <div className="rounded-[6px] border border-admin-line bg-white p-4">
+                <p className="text-[12px] text-admin-muted">
+                  {process.env.NEXT_PUBLIC_SITE_URL || "https://your-store.example"}/category/
+                  {value.slug || "category"}
+                </p>
+                <p className="mt-1 text-[18px] text-brand-deep">
+                  {value.seoTitle || value.name || "Category title"}
+                </p>
+                <p className="mt-1 text-[12px] leading-5 text-ink">
+                  {value.seoDescription || value.description || "Add a meta description to improve search previews."}
+                </p>
+              </div>
+              <label className="flex items-start gap-2 text-[13px] text-ink">
+                <input
+                  type="checkbox"
+                  checked={value.noindex}
+                  onChange={(event) => setValue({ ...value, noindex: event.target.checked })}
+                  className="mt-0.5 h-4 w-4"
                 />
-              </Field>
-            </FieldGrid>
+                <span>
+                  Hide from search engines
+                  <span className="mt-0.5 block text-[11px] text-admin-muted">
+                    Adds noindex and removes the category from the sitemap.
+                  </span>
+                </span>
+              </label>
+            </div>
           </FormSection>
         </SettingsSectionForm>
       </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
 import { getSetting } from "@/lib/admin/settings";
+import { getSiteUrl } from "@/lib/site";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import RouteProgress from "@/components/RouteProgress";
 import "./globals.css";
@@ -14,8 +15,16 @@ const ibmPlexSans = IBM_Plex_Sans({
 
 export async function generateMetadata(): Promise<Metadata> {
   const [general, seo] = await Promise.all([getSetting("general"), getSetting("seo")]);
+  const verification = {
+    ...(seo.googleSiteVerification ? { google: seo.googleSiteVerification } : {}),
+    ...(seo.bingSiteVerification
+      ? { other: { "msvalidate.01": seo.bingSiteVerification } }
+      : {}),
+  };
+
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+    metadataBase: new URL(getSiteUrl()),
+    applicationName: general.storeName,
     title: {
       default: general.storeName,
       template: seo.titleTemplate,
@@ -23,10 +32,20 @@ export async function generateMetadata(): Promise<Metadata> {
     description: seo.metaDescription,
     icons: general.favicon ? { icon: general.favicon } : undefined,
     openGraph: {
+      type: "website",
+      siteName: general.storeName,
+      locale: "en_RW",
       title: general.storeName,
       description: seo.metaDescription,
       images: seo.ogImage ? [seo.ogImage] : undefined,
     },
+    twitter: {
+      card: seo.ogImage ? "summary_large_image" : "summary",
+      title: general.storeName,
+      description: seo.metaDescription,
+      ...(seo.ogImage ? { images: [seo.ogImage] } : {}),
+    },
+    ...(Object.keys(verification).length ? { verification } : {}),
     robots: seo.indexable ? undefined : { index: false, follow: false },
   };
 }

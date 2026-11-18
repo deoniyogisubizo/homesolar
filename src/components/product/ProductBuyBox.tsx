@@ -195,7 +195,7 @@ return (
       </h1>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] lg:mt-2.5 lg:text-[13px]">
-        <span className="flex items-center gap-[2px] text-ink" aria-label={`Rated ${product.ratingAverage} out of 5`}>
+        <span role="img" className="flex items-center gap-[2px] text-gold" aria-label={`Rated ${product.ratingAverage} out of 5`}>
           {Array.from({ length: 5 }).map((_, index) => (
             <svg
               key={index}
@@ -220,7 +220,7 @@ return (
             <span className="text-[14px] text-muted line-through lg:text-[14px]">
               <Price value={compareAtPrice} compact />
             </span>
-            <span className="inline-flex h-[22px] items-center rounded-full bg-ink px-3 text-[10px] font-semibold text-white">
+            <span className="inline-flex h-[22px] items-center rounded-full bg-gold px-3 text-[10px] font-semibold text-white">
               {discount}% OFF
             </span>
           </>
@@ -320,7 +320,7 @@ return (
             type="button"
             onClick={addToCart}
             disabled={outOfStock || cartState === "loading"}
-            className={`flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[8px] bg-ink text-[14px] font-semibold text-white transition-opacity duration-150 lg:h-[46px] lg:text-[14px] ${
+            className={`flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[8px] bg-orange text-[14px] font-semibold text-white transition-opacity duration-150 lg:h-[46px] lg:text-[14px] ${
               outOfStock ? "cursor-not-allowed opacity-40" : "hover:opacity-90"
             }`}
           >
@@ -342,7 +342,7 @@ return (
 
         <div className="mt-7 grid gap-5 border-t border-[#E5E7EB] pt-5 sm:grid-cols-2 lg:mt-6 lg:gap-6">
           <div className="min-w-0">
-            <h2 className="text-[11px]! font-semibold uppercase tracking-[0.14em]! text-muted">
+            <h2 className="text-[11px]! font-semibold tracking-[0.14em]! text-muted">
               Details
             </h2>
             <p className="mt-2 text-[13px]! leading-[1.6] text-ink">{product.detailsIntro}</p>
@@ -350,7 +350,7 @@ return (
 
           {detailSpecs.length ? (
             <div className="min-w-0">
-              <h2 className="text-[11px]! font-semibold uppercase tracking-[0.14em]! text-muted">
+              <h2 className="text-[11px]! font-semibold tracking-[0.14em]! text-muted">
                 Specifications
               </h2>
               <dl className="mt-2 divide-y divide-[#F0F1F3]">
@@ -367,7 +367,7 @@ return (
             </div>
           ) : detailFeatures.length ? (
             <div className="min-w-0">
-              <h2 className="text-[11px]! font-semibold uppercase tracking-[0.14em]! text-muted">
+              <h2 className="text-[11px]! font-semibold tracking-[0.14em]! text-muted">
                 Highlights
               </h2>
               <ul className="mt-2 space-y-2">

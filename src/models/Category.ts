@@ -3,6 +3,7 @@ import { Schema, model, models, type Model } from "mongoose";
 export type CategoryDocument = {
   name: string;
   slug: string;
+  slugHistory: string[];
   description: string;
   image: string;
   bannerImage?: string | null;
@@ -11,6 +12,8 @@ export type CategoryDocument = {
   active: boolean;
   seoTitle: string;
   seoDescription: string;
+  noindex: boolean;
+  googleProductCategory: string;
   archivedAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
@@ -20,6 +23,7 @@ const categorySchema = new Schema<CategoryDocument>(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    slugHistory: { type: [String], default: [] },
     description: { type: String, required: true },
     image: { type: String, required: true },
     bannerImage: { type: String, default: "" },
@@ -28,12 +32,15 @@ const categorySchema = new Schema<CategoryDocument>(
     active: { type: Boolean, default: true, index: true },
     seoTitle: { type: String, default: "" },
     seoDescription: { type: String, default: "" },
+    noindex: { type: Boolean, default: false },
+    googleProductCategory: { type: String, default: "", trim: true },
     archivedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
 
 categorySchema.index({ active: 1, order: 1 });
+categorySchema.index({ slugHistory: 1 });
 
 // Next.js dev reuses compiled modules across hot reloads, so a Category model
 // compiled before bannerImage existed would silently drop the field on save.

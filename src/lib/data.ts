@@ -24,6 +24,7 @@ import type {
   Review as ReviewType,
   ReviewSummary,
   SiteContentData,
+  StorePage,
 } from "@/types";
 
 const HOME_PRODUCT_LIMIT = 6;
@@ -365,6 +366,39 @@ export async function getProductBySlugOrId(value: string): Promise<ProductType |
   return getProductBySlug(value);
 }
 
+export async function getProductRedirect(slug: string): Promise<string | null> {
+  cacheLife("minutes");
+  cacheTag("products");
+
+  await connectToDatabase();
+  const product = await Product.findOne({ slugHistory: slug, ...PUBLIC_PRODUCT })
+    .select("slug")
+    .lean();
+  return product?.slug ?? null;
+}
+
+export async function getCategoryRedirect(slug: string): Promise<string | null> {
+  cacheLife("minutes");
+  cacheTag("categories");
+
+  await connectToDatabase();
+  const category = await Category.findOne({ slugHistory: slug, ...PUBLIC_CATEGORY })
+    .select("slug")
+    .lean();
+  return category?.slug ?? null;
+}
+
+export async function getPageRedirect(slug: string): Promise<string | null> {
+  cacheLife("minutes");
+  cacheTag("pages");
+
+  await connectToDatabase();
+  const page = await Page.findOne({ slugHistory: slug, status: "published" })
+    .select("slug")
+    .lean();
+  return page?.slug ?? null;
+}
+
 export async function getRelatedProducts(
   productId: string,
   categorySlug: string,
@@ -546,7 +580,7 @@ export async function getCategorySlugs(): Promise<string[]> {
   return categories.map((category) => category.slug);
 }
 
-export async function getPublishedPage(slug: string) {
+export async function getPublishedPage(slug: string): Promise<StorePage | null> {
   cacheLife("minutes");
   cacheTag("pages", `page-${slug}`);
 
@@ -561,8 +595,30 @@ export async function getPublishedPage(slug: string) {
     content: page.content,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
+    noindex: page.noindex ?? false,
+    faqs: (page.faqs ?? []).map((faq) => ({ question: faq.question, answer: faq.answer })),
     updatedAt: (page.updatedAt ?? new Date()).toISOString(),
   };
+}
+
+export async function getPublishedPages(): Promise<StorePage[]> {
+  cacheLife("minutes");
+  cacheTag("pages");
+
+  await connectToDatabase();
+  const pages = await Page.find({ status: "published" }).sort({ order: 1, title: 1 }).lean();
+  return pages.map((page) => ({
+    id: page._id.toString(),
+    title: page.title,
+    slug: page.slug,
+    excerpt: page.excerpt,
+    content: page.content,
+    seoTitle: page.seoTitle,
+    seoDescription: page.seoDescription,
+    noindex: page.noindex ?? false,
+    faqs: (page.faqs ?? []).map((faq) => ({ question: faq.question, answer: faq.answer })),
+    updatedAt: (page.updatedAt ?? new Date()).toISOString(),
+  }));
 }
 
 export async function getPublishedPageSlugs(): Promise<string[]> {
@@ -576,20 +632,110 @@ export async function getPublishedPageSlugs(): Promise<string[]> {
 
 export async function getSitemapEntries() {
   cacheLife("minutes");
-  cacheTag("products", "categories", "pages");
+  cacheTag("products", "categories", "pages", "campaigns");
 
   await connectToDatabase();
-  const [products, categories, pages] = await Promise.all([
-    Product.find(PUBLIC_PRODUCT).select("slug updatedAt").lean(),
-    Category.find(PUBLIC_CATEGORY).select("slug updatedAt").lean(),
-    Page.find({ status: "published" }).select("slug updatedAt").lean(),
+  const now = new Date();
+  const [products, categories, pages, campaigns] = await Promise.all([
+    Product.find({ ...PUBLIC_PRODUCT, noindex: { $ne: true } })
+      .select("slug updatedAt image gallery images category")
+      .lean(),
+    Category.find({ ...PUBLIC_CATEGORY, noindex: { $ne: true } })
+      .select("slug updatedAt image")
+      .lean(),
+    Page.find({ status: "published", noindex: { $ne: true } })
+      .select("slug updatedAt")
+      .lean(),
+    Campaign.find({
+      active: true,
+      endedAt: null,
+      pausedAt: null,
+      startsAt: { $lte: now },
+      endsAt: { $gte: now },
+    })
+      .select("scope categoryIds productIds excludedProductIds updatedAt")
+      .lean(),
   ]);
 
+  const productEntries = products.map((product) => {
+    let lastModified = product.updatedAt ?? null;
+    const productId = String(product._id);
+    const categoryId = String(product.category);
+
+    for (const campaign of campaigns) {
+      if (!campaign.updatedAt) continue;
+      const excluded = campaign.excludedProductIds.map(String).includes(productId);
+      const applies = !excluded && (
+        campaign.scope === "store" ||
+        (campaign.scope === "products" && campaign.productIds.map(String).includes(productId)) ||
+        (campaign.scope === "categories" && campaign.categoryIds.map(String).includes(categoryId))
+      );
+      if (!applies) continue;
+      if (!lastModified || campaign.updatedAt > lastModified) {
+        lastModified = campaign.updatedAt;
+      }
+    }
+
+    const images = product.images?.length
+      ? product.images.map((image) => image.src)
+      : product.gallery?.length
+        ? product.gallery
+        : [product.image];
+
+    return { slug: product.slug, updatedAt: lastModified, images };
+  });
+
+  const staticPages = [
+    { slug: "contact", updatedAt: null as Date | null, images: [] as string[] },
+    { slug: "privacy-policy", updatedAt: null as Date | null, images: [] as string[] },
+    { slug: "terms-and-conditions", updatedAt: null as Date | null, images: [] as string[] },
+  ];
+
   return {
-    products: products.map((product) => ({ slug: product.slug, updatedAt: product.updatedAt ?? null })),
-    categories: categories.map((category) => ({ slug: category.slug, updatedAt: category.updatedAt ?? null })),
-    pages: pages.map((page) => ({ slug: page.slug, updatedAt: page.updatedAt ?? null })),
+    products: productEntries,
+    categories: categories.map((category) => ({
+      slug: category.slug,
+      updatedAt: category.updatedAt ?? null,
+      images: category.image ? [category.image] : [],
+    })),
+    pages: [
+      ...pages.map((page) => ({
+        slug: page.slug,
+        updatedAt: page.updatedAt ?? null,
+        images: [],
+      })),
+      ...staticPages,
+    ],
   };
+}
+
+export async function getMerchantFeedProducts(): Promise<ProductType[]> {
+  cacheLife("minutes");
+  cacheTag("products", "categories", "campaigns");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+  const products = await Product.find(PUBLIC_PRODUCT)
+    .sort({ createdAt: 1 })
+    .populate("category")
+    .lean();
+
+  return products.map((product) => withPricing(serializeProduct(product as never), context));
+}
+
+export async function getBestSellerRanking(limit = 10): Promise<ProductType[]> {
+  cacheLife("minutes");
+  cacheTag("products", "campaigns");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+  const products = await Product.find(PUBLIC_PRODUCT)
+    .sort({ bestSellerOrder: 1, createdAt: 1 })
+    .limit(limit)
+    .populate("category")
+    .lean();
+
+  return products.map((product) => withPricing(serializeProduct(product as never), context));
 }
 
 async function publicProductCounts() {

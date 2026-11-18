@@ -20,6 +20,7 @@ export function serializeCategory(category: LeanCategory, productCount?: number)
     id: category._id.toString(),
     name: category.name,
     slug: category.slug,
+    slugHistory: category.slugHistory ?? [],
     description: category.description,
     image: category.image,
     bannerImage: category.bannerImage || category.image,
@@ -28,6 +29,9 @@ export function serializeCategory(category: LeanCategory, productCount?: number)
     active: category.active ?? true,
     seoTitle: category.seoTitle ?? "",
     seoDescription: category.seoDescription ?? "",
+    noindex: category.noindex ?? false,
+    googleProductCategory: category.googleProductCategory ?? "",
+    updatedAt: (category.updatedAt ?? new Date()).toISOString(),
     ...(typeof productCount === "number" ? { productCount } : {}),
   };
 }
@@ -44,10 +48,15 @@ export function serializeProduct(product: LeanProduct): Product {
     name: product.name,
     pageTitle: product.pageTitle || product.name,
     slug: product.slug,
+    slugHistory: product.slugHistory ?? [],
     publishStatus: product.publishStatus ?? "active",
     tags: product.tags ?? [],
     seoTitle: product.seoTitle ?? "",
     seoDescription: product.seoDescription ?? "",
+    noindex: product.noindex ?? false,
+    brand: product.brand ?? "",
+    gtin: product.gtin ?? "",
+    mpn: product.mpn ?? "",
     lowStockThreshold: product.lowStockThreshold ?? null,
     description: product.description,
     shortDescription: product.shortDescription,
@@ -56,8 +65,13 @@ export function serializeProduct(product: LeanProduct): Product {
     image: product.image,
     gallery: product.gallery?.length ? product.gallery : [product.image],
     category: category
-      ? { id: category._id.toString(), name: category.name, slug: category.slug }
-      : { id: "", name: "Solar", slug: "solar-panels" },
+      ? {
+          id: category._id.toString(),
+          name: category.name,
+          slug: category.slug,
+          googleProductCategory: category.googleProductCategory ?? "",
+        }
+      : { id: "", name: "Solar", slug: "solar-panels", googleProductCategory: "" },
     badge: product.badge ?? null,
     rating: ratingAverage,
     reviewCount: ratingCount,
@@ -92,6 +106,7 @@ export function serializeProduct(product: LeanProduct): Product {
     highlights: product.highlights ?? [],
     featuredOrder: product.featuredOrder ?? null,
     bestSellerOrder: product.bestSellerOrder ?? null,
+    updatedAt: (product.updatedAt ?? new Date()).toISOString(),
   };
 }
 

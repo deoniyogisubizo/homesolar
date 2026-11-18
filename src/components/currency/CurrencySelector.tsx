@@ -39,9 +39,9 @@ export function CurrencySelector({ codes }: { codes?: string[] }) {
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Currency: ${CURRENCIES[currency].name}`}
+        aria-label={`${currency} — ${CURRENCIES[currency].name}`}
         onClick={() => setOpen((current) => !current)}
-        className="flex items-center gap-1 text-[16px] font-semibold uppercase tracking-[0.08em] text-ink"
+        className="flex items-center gap-1 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink"
       >
         {currency}
         <ChevronDown className="h-4 w-4" />

@@ -25,6 +25,8 @@ export default async function EditPage({ params }: { params: Promise<{ id: strin
     content: page.content,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
+    noindex: page.noindex ?? false,
+    faqs: (page.faqs ?? []).map((faq) => ({ question: faq.question, answer: faq.answer })),
     status: page.status,
     showInFooter: page.showInFooter,
     order: page.order,

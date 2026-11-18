@@ -14,6 +14,7 @@ import {
 
 export const metadata = {
   title: "Search products",
+  robots: { index: false, follow: false },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -143,6 +144,22 @@ async function SearchResults({ searchParams }: { searchParams: SearchParams }) {
           >
             {hasFilters ? "Clear filters" : "View all products"}
           </Link>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <p className="text-[13px] text-muted">Popular categories:</p>
+            {categories
+              .slice()
+              .sort((a, b) => (b.productCount ?? 0) - (a.productCount ?? 0))
+              .slice(0, 6)
+              .map((category) => (
+                <Link
+                  key={category.slug}
+                  href={`/search?category=${encodeURIComponent(category.slug)}`}
+                  className="inline-flex h-9 items-center rounded-[5px] border border-line bg-white px-5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink transition-colors hover:border-navy hover:text-navy"
+                >
+                  {category.name} · {category.productCount}
+                </Link>
+              ))}
+          </div>
         </div>
       )}
     </div>

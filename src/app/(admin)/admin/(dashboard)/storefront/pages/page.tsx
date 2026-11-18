@@ -140,15 +140,8 @@ export default async function PagesListPage({
           bulkOptions={[{ value: "delete", label: "Delete" }]}
           bulkAction={bulkDeletePagesFormAction}
           rowActions={[
-            { label: "Edit", kind: "edit", href: (id) => `/admin/storefront/pages/${id}` },
-            {
-              label: "Delete",
-              kind: "delete",
-              onDelete: (id) =>
-                deletePageAction({ id }).then((r) => {
-                  if (!r.ok) throw new Error(r.error);
-                }),
-            },
+            { label: "Edit", kind: "edit", hrefPrefix: "/admin/storefront/pages" },
+            { label: "Delete", kind: "delete", onDeleteAction: deletePageAction },
           ]}
         />
       </PageBody>

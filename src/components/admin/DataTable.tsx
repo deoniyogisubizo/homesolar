@@ -16,6 +16,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, Download, Loader2, Trash2 } from "lucide-react";
 import { StatusBadge, type StatusTone } from "@/components/admin/StatusBadge";
 import { useToast } from "@/components/admin/ToastProvider";
+import type { ActionResult } from "@/lib/admin/action-result";
 
 type AlignMeta = { align?: "left" | "right" };
 
@@ -45,8 +46,10 @@ export type BulkOption = { value: string; label: string };
 export type RowAction = {
   label: string;
   kind: "edit" | "delete";
-  href?: (id: string) => string;
-  onDelete?: (id: string) => Promise<void>;
+  /** Base path for edit links. The row id is appended, e.g. `/admin/products` → `/admin/products/<id>`. */
+  hrefPrefix?: string;
+  /** Server action invoked with `{ id }` to delete the row. Must be exported from a `"use server"` module. */
+  onDeleteAction?: (input: { id: string }) => Promise<ActionResult<null>>;
 };
 
 type RowData = AdminTableRow & { values: Record<string, AdminTableCell | undefined> };
@@ -163,11 +166,15 @@ export function DataTable({
   };
 
   const runDelete = async (action: RowAction, id: string) => {
-    if (!action.onDelete) return;
+    if (!action.onDeleteAction) return;
     setDeleting(id);
     try {
-      await action.onDelete(id);
+      const result = await action.onDeleteAction({ id });
       setDeleting(null);
+      if (!result.ok) {
+        toast(result.error, "error");
+        return;
+      }
       router.refresh();
       toast("Record deleted.");
     } catch (error) {
@@ -339,18 +346,18 @@ export function DataTable({
                 {rowActions?.length && (
                   <td key="actions" className={`px-3 py-2.5 text-[11px] flex items-center gap-1 ${deleting === row.original.id ? "bg-admin-line/10" : ""}`}>
                     {rowActions.map((action) => {
-                      if (action.kind === "edit" && action.href) {
+                      if (action.kind === "edit" && action.hrefPrefix) {
                         return (
                           <Link
                             key="edit"
-                            href={action.href(row.original.id)}
+                            href={`${action.hrefPrefix}/${row.original.id}`}
                             className="font-medium text-brand-deep hover:underline text-[11px]"
                           >
                             Edit
                           </Link>
                         );
                       }
-                      if (action.kind === "delete" && action.onDelete) {
+                      if (action.kind === "delete" && action.onDeleteAction) {
                         return (
                           <button
                             key="delete"
