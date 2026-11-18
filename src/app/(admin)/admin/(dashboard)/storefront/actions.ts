@@ -264,4 +264,72 @@ export async function archivePageAction(input: unknown): Promise<ActionResult<nu
   });
 }
 
+export async function deletePageAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("pages:write");
+    const parsed = z.object({ id: idSchema }).safeParse(input);
+    if (!parsed.success) return actionError("Invalid page.");
+
+    await connectToDatabase();
+    const page = await Page.findById(parsed.data.id);
+    if (!page) return actionError("Page not found.");
+
+    await page.deleteOne();
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "page",
+      entityId: parsed.data.id,
+      summary: `Deleted page ${page.title}`,
+      before: { title: page.title, slug: page.slug, status: page.status },
+    });
+
+    revalidateStorefront(["pages", `page-${page.slug}`, "site-content", "footer"]);
+    return actionOk(null);
+  });
+}
+
+export async function bulkDeletePagesAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("pages:write");
+    const parsed = z.object({ ids: z.array(idSchema).min(1, "Select at least one page.") }).safeParse(input);
+    if (!parsed.success) return actionError("Invalid pages.");
+
+    await connectToDatabase();
+    const ids = parsed.data.ids;
+    const pages = await Page.find({ _id: { $in: ids } });
+    if (!pages.length) return actionError("No matching pages were found.");
+
+    let deleted = 0;
+
+    for (const page of pages) {
+      await page.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "page",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} page${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    revalidateStorefront(["pages", "site-content", "footer"]);
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkDeletePagesFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkDeletePagesAction({ ids, intent });
+}
+
 export type SiteContentSaveKey = keyof SiteContentData;

@@ -10,13 +10,58 @@ import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionR
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { normalizeCouponCode } from "@/lib/coupons";
 import {
+  campaignBulkDeleteSchema,
   campaignDeleteSchema,
   campaignInputSchema,
   campaignToggleSchema,
+  couponBulkDeleteSchema,
   couponDeleteSchema,
   couponInputSchema,
   couponStatusSchema,
 } from "@/schemas/campaigns";
+
+export async function bulkDeleteCampaignsAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("campaigns:write");
+    const parsed = campaignBulkDeleteSchema.safeParse(input);
+    if (!parsed.success) return actionError("Invalid campaigns.");
+
+    await connectToDatabase();
+    const { ids } = parsed.data;
+    const campaigns = await Campaign.find({ _id: { $in: ids } });
+    if (!campaigns.length) return actionError("No matching campaigns were found.");
+
+    let deleted = 0;
+
+    for (const campaign of campaigns) {
+      await campaign.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "campaign",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} campaign${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    revalidateStorefront(["campaigns", "products", "homepage", "categories"]);
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkDeleteCampaignsFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkDeleteCampaignsAction({ ids, intent });
+  revalidatePath("/admin/discounts/campaigns");
+}
 
 function campaignPayload(data: ReturnType<typeof campaignInputSchema.parse>) {
   return {
@@ -301,4 +346,47 @@ export async function deleteCouponAction(input: unknown): Promise<ActionResult<n
     revalidatePath("/admin/discounts/coupons");
     return actionOk(null);
   });
+}
+
+export async function bulkDeleteCouponsAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("coupons:write");
+    const parsed = couponBulkDeleteSchema.safeParse(input);
+    if (!parsed.success) return actionError("Invalid coupons.");
+
+    await connectToDatabase();
+    const { ids } = parsed.data;
+    const coupons = await Coupon.find({ _id: { $in: ids } });
+    if (!coupons.length) return actionError("No matching coupons were found.");
+
+    let deleted = 0;
+
+    for (const coupon of coupons) {
+      await coupon.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "coupon",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} coupon${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    revalidateStorefront(["coupons", "products", "campaigns"]);
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkDeleteCouponsFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkDeleteCouponsAction({ ids, intent });
+  revalidatePath("/admin/discounts/coupons");
 }

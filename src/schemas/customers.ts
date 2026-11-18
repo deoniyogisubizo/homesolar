@@ -87,3 +87,7 @@ export const customerArchiveSchema = z.object({
   id: idSchema,
   archived: z.boolean(),
 });
+
+export const customerBulkDeleteSchema = z.object({
+  ids: z.array(idSchema).min(1, "Select at least one customer."),
+});

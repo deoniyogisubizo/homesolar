@@ -86,6 +86,10 @@ export const campaignToggleSchema = z.object({
 
 export const campaignDeleteSchema = z.object({ id: idSchema });
 
+export const campaignBulkDeleteSchema = z.object({
+  ids: z.array(idSchema).min(1, "Select at least one campaign."),
+});
+
 export const couponInputSchema = z
   .object({
     id: idSchema.optional(),
@@ -149,3 +153,7 @@ export const couponStatusSchema = z.object({
 });
 
 export const couponDeleteSchema = z.object({ id: idSchema });
+
+export const couponBulkDeleteSchema = z.object({
+  ids: z.array(idSchema).min(1, "Select at least one coupon."),
+});

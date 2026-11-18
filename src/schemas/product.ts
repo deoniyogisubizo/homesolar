@@ -118,6 +118,7 @@ export const productBulkSchema = z.object({
     "unfeature",
     "best-seller",
     "remove-best-seller",
+    "delete",
   ]),
 });
 

@@ -6,6 +6,7 @@ import { guardPage } from "@/lib/admin/page-guard";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Product } from "@/models/Product";
 import { Review } from "@/models/Review";
+import { bulkDeleteReviewsFormAction } from "@/app/(admin)/admin/(dashboard)/reviews/actions";
 
 export const metadata = { title: "Reviews" };
 
@@ -182,6 +183,8 @@ export default async function ReviewsPage({
               : "Reviews submitted on product pages will appear here for moderation."
           }
           defaultSort={{ key: "created", desc: true }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkDeleteReviewsFormAction}
         />
       </PageBody>
     </>

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Product } from "@/models/Product";
 import { InventoryMovement } from "@/models/InventoryMovement";
@@ -9,6 +10,36 @@ import { recordAudit } from "@/lib/admin/audit";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { inventoryAdjustSchema } from "@/schemas/inventory";
+import { idSchema } from "@/schemas/common";
+
+export async function deleteInventoryAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("inventory:write");
+    const parsed = z.object({ id: idSchema }).safeParse(input);
+    if (!parsed.success) return actionError("Invalid product.");
+
+    await connectToDatabase();
+    const product = await Product.findById(parsed.data.id);
+    if (!product) return actionError("Product not found.");
+
+    await product.deleteOne();
+    await InventoryMovement.deleteMany({ productId: product._id });
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "inventory",
+      entityId: parsed.data.id,
+      summary: `Deleted inventory record for ${product.name}`,
+      before: { stock: product.stock, status: product.status },
+    });
+
+    revalidateStorefront(["products", "homepage", "categories"]);
+    revalidatePath("/admin/inventory");
+    return actionOk(null);
+  });
+}
 
 function statusFor(stock: number, threshold: number | null) {
   const limit = threshold ?? 5;

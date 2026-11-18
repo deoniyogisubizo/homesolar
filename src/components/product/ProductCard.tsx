@@ -71,10 +71,12 @@ export function ProductCard({
         <p className="line-clamp-2 text-left text-[11px] font-normal leading-none text-[#555555]">
           {product.cardSubtitle ?? product.shortDescription ?? product.description}
         </p>
-        <p className="mt-1 flex flex-wrap items-baseline justify-start gap-x-2 whitespace-nowrap text-[11px] font-bold leading-5 text-ink">
-          <PriceRange price={price} priceMax={priceMax} />
+        <p className="mt-1 flex min-w-0 items-baseline gap-x-2 whitespace-nowrap text-[11px] font-bold leading-5 text-ink">
+          <span className="min-w-0 truncate">
+            <PriceRange price={price} priceMax={priceMax} />
+          </span>
           {compareAtPrice && compareAtPrice > price ? (
-            <span className="text-[9px] font-normal text-muted line-through whitespace-nowrap">
+            <span className="shrink-0 text-[9px] font-normal text-muted line-through whitespace-nowrap">
               <PriceRange price={compareAtPrice} />
             </span>
           ) : null}

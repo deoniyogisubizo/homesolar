@@ -13,8 +13,9 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, Download, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Columns3, Download, Loader2, Trash2 } from "lucide-react";
 import { StatusBadge, type StatusTone } from "@/components/admin/StatusBadge";
+import { useToast } from "@/components/admin/ToastProvider";
 
 type AlignMeta = { align?: "left" | "right" };
 
@@ -41,6 +42,13 @@ export type AdminTableColumn = {
 
 export type BulkOption = { value: string; label: string };
 
+export type RowAction = {
+  label: string;
+  kind: "edit" | "delete";
+  href?: (id: string) => string;
+  onDelete?: (id: string) => Promise<void>;
+};
+
 type RowData = AdminTableRow & { values: Record<string, AdminTableCell | undefined> };
 
 export function DataTable({
@@ -54,6 +62,7 @@ export function DataTable({
   bulkOptions,
   bulkAction,
   defaultSort,
+  rowActions,
 }: {
   columns: AdminTableColumn[];
   rows: AdminTableRow[];
@@ -65,10 +74,12 @@ export function DataTable({
   bulkOptions?: BulkOption[];
   bulkAction?: (formData: FormData) => Promise<void>;
   defaultSort?: { key: string; desc?: boolean };
+  rowActions?: RowAction[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [sorting, setSorting] = useState<SortingState>(
     defaultSort ? [{ id: defaultSort.key, desc: Boolean(defaultSort.desc) }] : [],
   );
@@ -78,6 +89,7 @@ export function DataTable({
   const [selected, setSelected] = useState<string[]>([]);
   const [bulkIntent, setBulkIntent] = useState(bulkOptions?.[0]?.value ?? "");
   const [pending, startTransition] = useTransition();
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const data = useMemo<RowData[]>(
     () => rows.map((row) => ({ ...row, values: row.cells })),
@@ -148,6 +160,20 @@ export function DataTable({
       await bulkAction(formData);
       setSelected([]);
     });
+  };
+
+  const runDelete = async (action: RowAction, id: string) => {
+    if (!action.onDelete) return;
+    setDeleting(id);
+    try {
+      await action.onDelete(id);
+      setDeleting(null);
+      router.refresh();
+      toast("Record deleted.");
+    } catch (error) {
+      setDeleting(null);
+      toast(error instanceof Error ? error.message : "Delete failed.", "error");
+    }
   };
 
   return (
@@ -310,6 +336,40 @@ export function DataTable({
                     </td>
                   );
                 })}
+                {rowActions?.length && (
+                  <td key="actions" className={`px-3 py-2.5 text-[11px] flex items-center gap-1 ${deleting === row.original.id ? "bg-admin-line/10" : ""}`}>
+                    {rowActions.map((action) => {
+                      if (action.kind === "edit" && action.href) {
+                        return (
+                          <Link
+                            key="edit"
+                            href={action.href(row.original.id)}
+                            className="font-medium text-brand-deep hover:underline text-[11px]"
+                          >
+                            Edit
+                          </Link>
+                        );
+                      }
+                      if (action.kind === "delete" && action.onDelete) {
+                        return (
+                          <button
+                            key="delete"
+                            onClick={() => runDelete(action, row.original.id)}
+                            disabled={deleting === row.original.id}
+                            className={`inline-flex h-8 items-center gap-1.5 rounded-[5px] px-2.5 text-[11px] font-medium text-danger hover:text-danger/90 ${deleting === row.original.id ? "bg-danger/10" : ""}`}
+                          >
+                            {deleting === row.original.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3 w-3" />
+                            )}
+                          </button>
+                        );
+                      }
+                      return null;
+                    })}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

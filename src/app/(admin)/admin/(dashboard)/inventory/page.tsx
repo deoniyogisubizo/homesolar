@@ -8,6 +8,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { Category } from "@/models/Category";
 import { Product } from "@/models/Product";
 import InventoryFilters from "@/components/admin/inventory/InventoryFilters";
+import { bulkProductsFormAction } from "@/app/(admin)/admin/(dashboard)/products/actions";
+import { deleteInventoryAction } from "@/app/(admin)/admin/(dashboard)/inventory/actions";
 
 export const metadata = { title: "Inventory" };
 
@@ -168,6 +170,19 @@ export default async function InventoryPage({
               : "Add products first, then track their stock levels here."
           }
           defaultSort={{ key: "stock", desc: false }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkProductsFormAction}
+          rowActions={[
+            { label: "Edit", kind: "edit", href: (id) => `/admin/inventory/${id}` },
+            {
+              label: "Delete",
+              kind: "delete",
+              onDelete: (id) =>
+                deleteInventoryAction({ id }).then((r) => {
+                  if (!r.ok) throw new Error(r.error);
+                }),
+            },
+          ]}
         />
       </PageBody>
     </>

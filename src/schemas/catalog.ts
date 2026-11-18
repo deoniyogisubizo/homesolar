@@ -16,3 +16,7 @@ export const categoryInputSchema = z.object({
 });
 
 export type CategoryInput = z.infer<typeof categoryInputSchema>;
+
+export const categoryBulkDeleteSchema = z.object({
+  ids: z.array(idSchema).min(1, "Select at least one category."),
+});

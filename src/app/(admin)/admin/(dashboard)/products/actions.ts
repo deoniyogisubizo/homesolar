@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Product } from "@/models/Product";
 import { Category } from "@/models/Category";
@@ -9,6 +10,7 @@ import { recordAudit } from "@/lib/admin/audit";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
 import { parseCsv } from "@/lib/csv";
+import { idSchema } from "@/schemas/common";
 import { productBulkSchema, productImportSchema, productInputSchema, type ProductInput } from "@/schemas/product";
 
 function statusFor(stock: number, threshold: number | null) {
@@ -147,6 +149,32 @@ export async function saveProductAction(input: unknown): Promise<ActionResult<{ 
   });
 }
 
+export async function deleteProductAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("products:write");
+    const parsed = z.object({ id: idSchema }).safeParse(input);
+    if (!parsed.success) return actionError("Invalid product.");
+
+    await connectToDatabase();
+    const product = await Product.findById(parsed.data.id);
+    if (!product) return actionError("Product not found.");
+
+    await product.deleteOne();
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "product",
+      entityId: parsed.data.id,
+      summary: `Deleted product ${product.name}`,
+      before: { name: product.name, slug: product.slug, price: product.price, stock: product.stock },
+    });
+
+    revalidateStorefront(["products", `product-${product.slug}`, "homepage", "categories", "campaigns"]);
+    return actionOk(null);
+  });
+}
+
 export async function bulkProductsAction(input: unknown): Promise<ActionResult<{ updated: number }>> {
   return runAdminAction(async () => {
     await assertSameOrigin();
@@ -202,6 +230,10 @@ export async function bulkProductsAction(input: unknown): Promise<ActionResult<{
         case "remove-best-seller":
           product.bestSellerOrder = null;
           break;
+        case "delete":
+          await Product.findByIdAndDelete(product._id);
+          updated += 1;
+          continue;
       }
       await product.save();
       updated += 1;

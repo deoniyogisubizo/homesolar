@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Category } from "@/models/Category";
@@ -8,7 +9,7 @@ import { assertSameOrigin, requirePermission } from "@/lib/admin/auth";
 import { recordAudit } from "@/lib/admin/audit";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
-import { categoryInputSchema } from "@/schemas/catalog";
+import { categoryBulkDeleteSchema, categoryInputSchema } from "@/schemas/catalog";
 import { idSchema } from "@/schemas/common";
 
 export async function saveCategoryAction(input: unknown): Promise<ActionResult<{ id: string }>> {
@@ -110,4 +111,54 @@ export async function deleteCategoryAction(input: unknown): Promise<ActionResult
     revalidateStorefront(["categories", "products", "homepage", "navigation", "site-content"]);
     return actionOk(null);
   });
+}
+
+export async function bulkCategoryDeleteAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("categories:write");
+    const parsed = categoryBulkDeleteSchema.safeParse(input);
+    if (!parsed.success) return actionError("Invalid categories.");
+
+    await connectToDatabase();
+    const { ids } = parsed.data;
+    const categories = await Category.find({ _id: { $in: ids } });
+    if (!categories.length) return actionError("No matching categories were found.");
+
+    let deleted = 0;
+
+    for (const category of categories) {
+      const products = await Product.countDocuments({ category: category._id });
+      if (products > 0) {
+        return actionError(
+          `Category ${category.name} still has ${products} product${products === 1 ? "" : "s"}. Move them to another category or deactivate this category instead.`
+        );
+      }
+
+      await category.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "category",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} category${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    revalidateStorefront(["categories", "products", "homepage", "navigation", "site-content"]);
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkCategoryDeleteFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkCategoryDeleteAction({ ids, intent });
+  revalidatePath("/admin/categories");
 }

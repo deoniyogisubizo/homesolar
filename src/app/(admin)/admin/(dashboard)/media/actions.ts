@@ -169,3 +169,53 @@ export async function deleteMediaAction(input: unknown): Promise<ActionResult<nu
     return actionOk(null);
   });
 }
+
+export async function bulkDeleteMediaAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("media:write");
+    const parsed = z.object({ ids: z.array(idSchema).min(1, "Select at least one media item.") }).safeParse(input);
+    if (!parsed.success) return actionError("Invalid media items.");
+
+    await connectToDatabase();
+    const ids = parsed.data.ids;
+    const items = await Media.find({ _id: { $in: ids } });
+    if (!items.length) return actionError("No matching media items were found.");
+
+    let deleted = 0;
+
+    for (const item of items) {
+      const usage = await findMediaUsage(item.url);
+      if (usage.length) {
+        return actionError(
+          `Media ${item.originalName} is in use: ${usage.slice(0, 4).map((entry) => entry.label).join(", ")}.`,
+        );
+      }
+
+      await removeLocalFiles([item.url, item.thumbUrl ?? "", item.originalUrl]);
+      await item.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "media",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} media item${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    revalidateStorefront(["media"]);
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkDeleteMediaFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkDeleteMediaAction({ ids, intent });
+}

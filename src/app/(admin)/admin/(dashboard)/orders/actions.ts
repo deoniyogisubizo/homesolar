@@ -17,6 +17,8 @@ import {
 } from "@/lib/admin/action-result";
 import { deductOrderStock, restoreOrderStock } from "@/lib/orders/stock";
 import { sendTemplatedEmail } from "@/lib/admin/mail";
+import { assertSameOrigin } from "@/lib/admin/auth";
+import { idSchema } from "@/schemas/common";
 
 const statusSchema = z.object({
   id: z.string().min(1),
@@ -270,4 +272,76 @@ export async function resendOrderEmailAction(input: unknown): Promise<ActionResu
     });
     return actionOk(null);
   });
+}
+
+export async function deleteOrderAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("orders:write");
+    const parsed = z.object({ id: idSchema }).safeParse(input);
+    if (!parsed.success) return actionError("Invalid order.");
+
+    await connectToDatabase();
+    const order = await Order.findById(parsed.data.id);
+    if (!order) return actionError("Order not found.");
+
+    await order.deleteOne();
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "order",
+      entityId: parsed.data.id,
+      summary: `Deleted order ${order.orderNumber}`,
+      before: { orderNumber: order.orderNumber, status: order.status, total: order.total },
+    });
+
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${parsed.data.id}`);
+    return actionOk(null);
+  });
+}
+
+const bulkOrderDeleteSchema = z.object({
+  ids: z.array(idSchema).min(1, "Select at least one order."),
+});
+
+export async function bulkDeleteOrdersAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("orders:write");
+    const parsed = bulkOrderDeleteSchema.safeParse(input);
+    if (!parsed.success) return actionError("Invalid orders.");
+
+    await connectToDatabase();
+    const { ids } = parsed.data;
+    const orders = await Order.find({ _id: { $in: ids } });
+    if (!orders.length) return actionError("No matching orders were found.");
+
+    let deleted = 0;
+
+    for (const order of orders) {
+      await order.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "order",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} order${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkDeleteOrdersFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkDeleteOrdersAction({ ids, intent });
 }

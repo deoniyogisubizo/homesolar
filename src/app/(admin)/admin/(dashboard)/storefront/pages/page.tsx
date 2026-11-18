@@ -5,6 +5,7 @@ import { labelize, statusToneFor } from "@/components/admin/StatusBadge";
 import { guardPage } from "@/lib/admin/page-guard";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Page } from "@/models/Page";
+import { bulkDeletePagesFormAction, deletePageAction } from "@/app/(admin)/admin/(dashboard)/storefront/actions";
 
 export const metadata = { title: "Pages" };
 
@@ -136,6 +137,19 @@ export default async function PagesListPage({
               : "Create an About page, policies or FAQs so the footer and navigation links have somewhere to go."
           }
           defaultSort={{ key: "order", desc: false }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkDeletePagesFormAction}
+          rowActions={[
+            { label: "Edit", kind: "edit", href: (id) => `/admin/storefront/pages/${id}` },
+            {
+              label: "Delete",
+              kind: "delete",
+              onDelete: (id) =>
+                deletePageAction({ id }).then((r) => {
+                  if (!r.ok) throw new Error(r.error);
+                }),
+            },
+          ]}
         />
       </PageBody>
     </>

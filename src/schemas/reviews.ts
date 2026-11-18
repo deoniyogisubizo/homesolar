@@ -12,3 +12,7 @@ export const reviewReplySchema = z.object({
 });
 
 export const reviewDeleteSchema = z.object({ id: idSchema });
+
+export const reviewBulkDeleteSchema = z.object({
+  ids: z.array(idSchema).min(1, "Select at least one review."),
+});

@@ -3,7 +3,7 @@ import { PageBody, PageHeader } from "@/components/admin/PageHeader";
 import { DataTable, type AdminTableRow } from "@/components/admin/DataTable";
 import { labelize, statusToneFor } from "@/components/admin/StatusBadge";
 import { ProductImportDialog } from "@/components/admin/catalog/ProductImportDialog";
-import { bulkProductsFormAction } from "@/app/(admin)/admin/(dashboard)/products/actions";
+import { bulkProductsFormAction, deleteProductAction } from "@/app/(admin)/admin/(dashboard)/products/actions";
 import { guardPage } from "@/lib/admin/page-guard";
 import { getSetting } from "@/lib/admin/settings";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -244,8 +244,20 @@ export default async function ProductsPage({
             { value: "unfeature", label: "Remove from featured" },
             { value: "best-seller", label: "Add to best selling" },
             { value: "remove-best-seller", label: "Remove from best selling" },
+            { value: "delete", label: "Delete" },
           ]}
           bulkAction={bulkProductsFormAction}
+          rowActions={[
+            { label: "Edit", kind: "edit", href: (id) => `/admin/products/${id}` },
+            {
+              label: "Delete",
+              kind: "delete",
+              onDelete: (id) =>
+                deleteProductAction({ id }).then((r) => {
+                  if (!r.ok) throw new Error(r.error);
+                }),
+            },
+          ]}
           emptyTitle={hasFilters ? "No products match these filters" : "No products yet"}
           emptyDescription={
             hasFilters

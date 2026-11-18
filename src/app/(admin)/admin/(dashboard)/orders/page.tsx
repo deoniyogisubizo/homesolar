@@ -13,6 +13,7 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "@/lib/admin/order-status";
+import { bulkDeleteOrdersFormAction, deleteOrderAction } from "@/app/(admin)/admin/(dashboard)/orders/actions";
 
 export const metadata = { title: "Orders" };
 
@@ -377,6 +378,12 @@ export default async function OrdersPage({
               : "Orders placed on the storefront will appear here automatically."
           }
           defaultSort={{ key: "created", desc: true }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkDeleteOrdersFormAction}
+          rowActions={[
+            { label: "Edit", kind: "edit", href: (id) => `/admin/orders/${id}` },
+            { label: "Delete", kind: "delete", onDelete: (id) => deleteOrderAction({ id }).then((r) => { if (!r.ok) throw new Error(r.error); }) },
+          ]}
         />
       </PageBody>
     </>

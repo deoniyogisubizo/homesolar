@@ -5,6 +5,7 @@ import { guardPage } from "@/lib/admin/page-guard";
 import { getSetting } from "@/lib/admin/settings";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Customer } from "@/models/Customer";
+import { bulkDeleteCustomersFormAction, deleteCustomerAction } from "@/app/(admin)/admin/(dashboard)/customers/actions";
 
 export const metadata = { title: "Customers" };
 
@@ -140,6 +141,19 @@ export default async function CustomersPage({
               : "Customers are created automatically when orders are placed."
           }
           defaultSort={{ key: "created", desc: true }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkDeleteCustomersFormAction}
+          rowActions={[
+            { label: "Edit", kind: "edit", href: (id) => `/admin/customers/${id}` },
+            {
+              label: "Delete",
+              kind: "delete",
+              onDelete: (id) =>
+                deleteCustomerAction({ id }).then((r) => {
+                  if (!r.ok) throw new Error(r.error);
+                }),
+            },
+          ]}
         />
       </PageBody>
     </>

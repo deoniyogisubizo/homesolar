@@ -8,7 +8,12 @@ import { assertSameOrigin, requirePermission } from "@/lib/admin/auth";
 import { recordAudit } from "@/lib/admin/audit";
 import { actionError, actionOk, fieldErrorsFromZod, runAdminAction, type ActionResult } from "@/lib/admin/action-result";
 import { revalidateStorefront } from "@/lib/admin/revalidate";
-import { reviewDeleteSchema, reviewModerateSchema, reviewReplySchema } from "@/schemas/reviews";
+import {
+  reviewBulkDeleteSchema,
+  reviewDeleteSchema,
+  reviewModerateSchema,
+  reviewReplySchema,
+} from "@/schemas/reviews";
 
 async function refreshProductRating(productId: unknown) {
   const [summary] = await Review.aggregate<{ count: number; average: number }>([
@@ -145,4 +150,43 @@ export async function deleteReviewAction(input: unknown): Promise<ActionResult<n
     revalidatePath("/admin/reviews");
     return actionOk(null);
   });
+}
+
+export async function bulkDeleteReviewsAction(input: unknown): Promise<ActionResult<{ deleted: number }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("reviews:write");
+    const parsed = reviewBulkDeleteSchema.safeParse(input);
+    if (!parsed.success) return actionError("Invalid reviews.");
+
+    await connectToDatabase();
+    const { ids } = parsed.data;
+    let deleted = 0;
+
+    for (const review of await Review.find({ _id: { $in: ids } })) {
+      await review.deleteOne();
+      deleted += 1;
+    }
+
+    await recordAudit({
+      actor: session,
+      action: "delete",
+      entity: "review",
+      entityId: null,
+      summary: `Bulk deleted ${deleted} review${deleted === 1 ? "" : "s"}`,
+      after: { ids, deleted },
+    });
+
+    revalidateStorefront(["reviews", "products", "homepage"]);
+    return actionOk({ deleted });
+  });
+}
+
+export async function bulkDeleteReviewsFormAction(formData: FormData): Promise<void> {
+  const ids = String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const intent = String(formData.get("intent") ?? "");
+  await bulkDeleteReviewsAction({ ids, intent });
 }

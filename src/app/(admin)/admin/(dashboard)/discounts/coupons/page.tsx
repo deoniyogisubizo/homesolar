@@ -7,6 +7,7 @@ import { getSetting } from "@/lib/admin/settings";
 import { couponStatus } from "@/lib/coupons";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Coupon } from "@/models/Coupon";
+import { bulkDeleteCouponsFormAction } from "@/app/(admin)/admin/(dashboard)/discounts/actions";
 
 export const metadata = { title: "Coupons" };
 
@@ -178,6 +179,8 @@ export default async function CouponsPage({
               : "Create a coupon code for checkout discounts, minimum-spend offers or free shipping."
           }
           defaultSort={{ key: "ends", desc: false }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkDeleteCouponsFormAction}
         />
       </PageBody>
     </>

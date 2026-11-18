@@ -7,6 +7,7 @@ import { getSetting } from "@/lib/admin/settings";
 import { getCampaignStatus } from "@/lib/pricing";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Campaign } from "@/models/Campaign";
+import { bulkDeleteCampaignsFormAction } from "@/app/(admin)/admin/(dashboard)/discounts/actions";
 
 export const metadata = { title: "Campaigns" };
 
@@ -196,6 +197,8 @@ export default async function CampaignsPage({
               : "Create a campaign to drive the storefront sale strip, promo card and discounted product prices."
           }
           defaultSort={{ key: "schedule", desc: true }}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkDeleteCampaignsFormAction}
         />
       </PageBody>
     </>

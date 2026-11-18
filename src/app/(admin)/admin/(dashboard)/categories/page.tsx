@@ -6,6 +6,7 @@ import { guardPage } from "@/lib/admin/page-guard";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Category } from "@/models/Category";
 import { Product } from "@/models/Product";
+import { bulkCategoryDeleteFormAction } from "@/app/(admin)/admin/(dashboard)/categories/actions";
 
 export const metadata = { title: "Categories" };
 
@@ -124,6 +125,8 @@ export default async function CategoriesPage({
           total={rows.length}
           page={1}
           pageSize={Math.max(rows.length, 10)}
+          bulkOptions={[{ value: "delete", label: "Delete" }]}
+          bulkAction={bulkCategoryDeleteFormAction}
           emptyTitle={params.q || params.status ? "No categories match these filters" : "No categories yet"}
           emptyDescription={
             params.q || params.status
