@@ -172,7 +172,7 @@ export function Header({
               <div key={item.label} className="group relative flex h-full items-center">
                 <Link
                   href={item.href}
-                  className="flex items-center gap-1.5 text-[13px] font-thin tracking-[0.05em] text-ink transition-colors hover:text-brand"
+                  className="flex items-center gap-1.5 text-[13px] font-medium tracking-[0.05em] text-muted transition-colors hover:text-navy"
                 >
                   {item.label}
                   {item.children?.length ? <ChevronDown className="h-4 w-4" strokeWidth={1.9} /> : null}
