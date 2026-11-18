@@ -4,20 +4,20 @@
   --font-sans: var(--font-ibm-plex-sans);
   --color-navy: #01264e;
   --color-navy-deep: #001d3d;
-  --color-brand: #0081f1;
+  --color-brand: #0069bb;
   --color-brand-deep: #005abe;
   --color-brand-light: #daebfd;
   --color-brand-pale: #ecf4fd;
   --color-promo-blue: #b8dbfe;
   --color-promo-pale: #d7eafe;
   --color-ink: #101828;
-  --color-muted: #6b7280;
+  --color-muted: #5b6472;
   --color-tile: #f3f6fa;
   --color-line: #e9edf3;
-  --color-orange: #f58220;
-  --color-orange-bright: #fe830a;
-  --color-gold: #b8860b;
-  --color-gold-dark: #966d08;
+  --color-orange: #a63a06;
+  --color-orange-bright: #c2410c;
+  --color-gold: #7a5a05;
+  --color-gold-dark: #634904;
   --color-success: #16794c;
   --color-success-pale: #e8f5ee;
   --color-warning: #a85b05;
@@ -49,14 +49,14 @@
   --font-weight-bold: 700;
 
   --animate-hero-progress: hero-progress 5s linear forwards;
+}
 
-  @keyframes hero-progress {
-    from {
-      transform: scaleX(0);
-    }
-    to {
-      transform: scaleX(1);
-    }
+@keyframes hero-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }
 
@@ -67,7 +67,7 @@
 html {
   scroll-behavior: smooth;
   overflow-anchor: none;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -79,7 +79,7 @@ body {
   font-weight: var(--font-weight-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 h1 {
