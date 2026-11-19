@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Mail, MapPin } from "lucide-react";
+import Link from "next/link";
 import type { ContactSettings } from "@/lib/admin/settings-defaults";
 
 interface TopBarProps {
@@ -78,6 +79,9 @@ export function TopBar({ contact, brandName }: TopBarProps) {
 
           {contact.primaryPhone && (
             <span className="flex items-center gap-2 text-white shrink-0">
+              <Link href="/contact" className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90 transition-colors hover:text-white">
+                Contact Us
+              </Link>
               <span>{contact.primaryPhone}</span>
               {contact.secondaryPhone ? <span> / {contact.secondaryPhone.replace(/^(\+250)(\d{3})(\d{3})(\d{3})$/, "$1 $2 $3 $4")}</span> : null}
             </span>
