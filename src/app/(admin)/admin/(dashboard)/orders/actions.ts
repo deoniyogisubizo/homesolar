@@ -5,6 +5,7 @@ import { z } from "zod";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Order } from "@/models/Order";
 import { recordAudit } from "@/lib/admin/audit";
+import { getSetting } from "@/lib/admin/settings";
 import { requirePermission } from "@/lib/admin/auth";
 import { canTransition, PAYMENT_METHODS, PAYMENT_STATUSES } from "@/lib/admin/order-status";
 import type { OrderStatus, PaymentMethod, PaymentStatus } from "@/lib/admin/order-status";
@@ -19,6 +20,17 @@ import { deductOrderStock, restoreOrderStock } from "@/lib/orders/stock";
 import { sendTemplatedEmail } from "@/lib/admin/mail";
 import { assertSameOrigin } from "@/lib/admin/auth";
 import { idSchema } from "@/schemas/common";
+import {
+  deliveryPinForOrder,
+  getInvoiceSettings,
+  getInvoiceSigningSecret,
+  getLatestInvoiceByOrderId,
+  getOrCreateDeliveryToken,
+  issueOrderInvoice,
+  toInvoiceSnapshot,
+} from "@/lib/invoices";
+import { regenerateDeliveryCode, unlockDeliveryCode } from "@/lib/delivery";
+import { enqueueOrderConfirmationMessages, processOutbox, retryOutboxMessage } from "@/lib/whatsapp/outbox";
 
 const statusSchema = z.object({
   id: z.string().min(1),
@@ -69,12 +81,11 @@ export async function changeOrderStatusAction(
     });
     if (nextStatus === "confirmed") order.stockDeducted = true;
     if (nextStatus === "cancelled") order.cancelledAt = new Date();
-    if (
-      nextStatus === "delivered" &&
-      order.paymentStatus === "unpaid" &&
-      order.paymentMethod === "cash_on_delivery"
-    ) {
-      order.paymentStatus = "paid";
+    if (nextStatus === "delivered") {
+      order.deliveredAt = new Date();
+      if (order.paymentStatus === "unpaid" && order.paymentMethod === "cash_on_delivery") {
+        order.paymentStatus = "paid";
+      }
     }
 
     try {
@@ -86,6 +97,24 @@ export async function changeOrderStatusAction(
 
     if (nextStatus === "cancelled" && order.stockDeducted) {
       await restoreOrderStock(parsed.data.id, session.email);
+    }
+
+    if (nextStatus === "confirmed") {
+      const invoiceSettings = await getInvoiceSettings();
+      if (invoiceSettings.reissueOnConfirm) {
+        try {
+          await issueOrderInvoice(parsed.data.id);
+        } catch {
+          // A failed reissue must not roll back a confirmed order. The invoice
+          // panel exposes a manual reissue action.
+        }
+      }
+      try {
+        await enqueueOrderConfirmationMessages(parsed.data.id);
+        await processOutbox(5);
+      } catch {
+        // Pending outbox rows are retried by the cron route.
+      }
     }
 
     await recordAudit({
@@ -269,6 +298,172 @@ export async function resendOrderEmailAction(input: unknown): Promise<ActionResu
       entity: "Order",
       entityId: String(order._id),
       summary: `Confirmation email resent for ${order.orderNumber}`,
+    });
+    return actionOk(null);
+  });
+}
+
+const invoiceIdSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function reissueInvoiceAction(input: unknown): Promise<ActionResult<{ invoiceNumber: string; revision: number }>> {
+  return runAdminAction(async () => {
+    const session = await requirePermission("orders:write");
+    const parsed = invoiceIdSchema.safeParse(input);
+    if (!parsed.success) return actionError("Order not found.");
+
+    await connectToDatabase();
+    const order = await Order.findById(parsed.data.id);
+    if (!order) return actionError("Order not found.");
+
+    const issued = await issueOrderInvoice(String(order._id));
+    await recordAudit({
+      actor: session,
+      action: "invoice.reissued",
+      entity: "Invoice",
+      entityId: String(issued.invoice._id ?? ""),
+      summary: `Invoice ${String(issued.invoice.invoiceNumber ?? "")} reissued for order ${order.orderNumber}`,
+      metadata: { orderNumber: order.orderNumber, revision: Number(issued.invoice.revision ?? 1) },
+    });
+
+    revalidatePath(`/admin/orders/${parsed.data.id}`);
+    return actionOk({ invoiceNumber: String(issued.invoice.invoiceNumber ?? ""), revision: Number(issued.invoice.revision ?? 1) });
+  });
+}
+
+export async function regenerateDeliveryCodeAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    const session = await requirePermission("orders:write");
+    const parsed = invoiceIdSchema.safeParse(input);
+    if (!parsed.success) return actionError("Order not found.");
+
+    await connectToDatabase();
+    const order = await Order.findById(parsed.data.id);
+    if (!order) return actionError("Order not found.");
+
+    await regenerateDeliveryCode(String(order._id));
+
+    const latestInvoice = await getLatestInvoiceByOrderId(String(order._id));
+
+    await recordAudit({
+      actor: session,
+      action: "invoice.code_regenerated",
+      entity: "Invoice",
+      entityId: String(latestInvoice?._id ?? ""),
+      summary: `Delivery code regenerated for order ${order.orderNumber}`,
+      metadata: { orderNumber: order.orderNumber },
+    });
+
+    revalidatePath(`/admin/orders/${parsed.data.id}`);
+    return actionOk(null);
+  });
+}
+
+export async function resendInvoiceAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    const session = await requirePermission("orders:write");
+    const parsed = invoiceIdSchema.safeParse(input);
+    if (!parsed.success) return actionError("Order not found.");
+
+    await connectToDatabase();
+    const order = await Order.findById(parsed.data.id).lean();
+    if (!order) return actionError("Order not found.");
+    if (!order.customer.email) return actionError("This customer has no email address.");
+
+    const invoice = await getLatestInvoiceByOrderId(String(order._id));
+    if (!invoice) return actionError("Invoice not found.");
+
+    const [general, delivery] = await Promise.all([
+      getSetting("general"),
+      getOrCreateDeliveryToken(String(invoice._id)),
+    ]);
+    const secret = getInvoiceSigningSecret();
+    const pin = order.deliveryCodeHash
+      ? deliveryPinForOrder(secret, {
+          _id: order._id,
+          deliveryCodeVersion: order.deliveryCodeVersion,
+        })
+      : "";
+    const symbol = general.currencySymbol;
+    const decimals = ["$", "£", "€"].includes(symbol) ? 2 : 0;
+    const invoiceUrl = `${(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/invoice/${order.token}`;
+
+    const result = await sendTemplatedEmail({
+      templateKey: "order_confirmation",
+      to: order.customer.email,
+      variables: {
+        customerName: order.customer.name,
+        orderNumber: order.orderNumber,
+        orderTotal: `${symbol}${order.total.toFixed(decimals)}`,
+        invoiceUrl,
+      },
+      orderId: String(order._id),
+      sentBy: session.email,
+      invoice: {
+        invoiceNumber: String(invoice.invoiceNumber ?? ""),
+        orderNumber: order.orderNumber,
+        snapshot: toInvoiceSnapshot(invoice),
+        deliveryToken: delivery?.token,
+        pin,
+        issuedAt: new Date(String(invoice.issuedAt ?? Date.now())),
+      },
+    });
+
+    if (!result.ok) return actionError(result.error);
+
+    await recordAudit({
+      actor: session,
+      action: "invoice.resent",
+      entity: "Invoice",
+      entityId: String(invoice._id ?? ""),
+      summary: `Invoice resent for order ${order.orderNumber}`,
+      metadata: { orderNumber: order.orderNumber },
+    });
+    return actionOk(null);
+  });
+}
+
+export async function unlockDeliveryCodeAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    const session = await requirePermission("orders:write");
+    const parsed = invoiceIdSchema.safeParse(input);
+    if (!parsed.success) return actionError("Order not found.");
+
+    await connectToDatabase();
+    const order = await Order.findById(parsed.data.id);
+    if (!order) return actionError("Order not found.");
+
+    await unlockDeliveryCode(String(order._id));
+
+    await recordAudit({
+      actor: session,
+      action: "delivery.pin_unlocked",
+      entity: "Order",
+      entityId: String(order._id),
+      summary: `Delivery code unlocked for order ${order.orderNumber}`,
+      metadata: { orderNumber: order.orderNumber },
+    });
+    return actionOk(null);
+  });
+}
+
+export async function retryOutboxMessageAction(input: unknown): Promise<ActionResult<null>> {
+  return runAdminAction(async () => {
+    const session = await requirePermission("orders:write");
+    const parsed = z.object({ id: z.string().min(1) }).safeParse(input);
+    if (!parsed.success) return actionError("Message not found.");
+
+    const retried = await retryOutboxMessage(parsed.data.id);
+    if (!retried) return actionError("This message can not be retried.");
+    await processOutbox(5);
+
+    await recordAudit({
+      actor: session,
+      action: "send",
+      entity: "whatsapp",
+      entityId: parsed.data.id,
+      summary: "Retried a WhatsApp outbox message",
     });
     return actionOk(null);
   });

@@ -25,10 +25,12 @@ const privatePaths = [
   "/api/:path*",
 ];
 
+const noindexPaths = ["/invoice/:path*", "/delivery/:path*"];
+
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  serverExternalPackages: ["sharp", "nodemailer", "bcryptjs", "mongoose"],
+  serverExternalPackages: ["sharp", "nodemailer", "bcryptjs", "mongoose", "@react-pdf/renderer", "qrcode"],
   turbopack: {
     rules: {
       "*.css": {
@@ -41,6 +43,18 @@ const nextConfig: NextConfig = {
     return [
       { source: "/(.*)", headers: securityHeaders },
       ...privatePaths.map((source) => ({ source, headers: noindexHeaders })),
+      ...noindexPaths.map((source) => ({
+        source,
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+        ],
+      })),
+      {
+        source: "/delivery/:path*",
+        headers: [{ key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" }],
+      },
     ];
   },
 };

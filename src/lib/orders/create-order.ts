@@ -13,6 +13,8 @@ import { generateOrderNumber } from "@/lib/orders/counter";
 import { loadCartQuote } from "@/lib/store";
 import { findDeliveryLocation } from "@/lib/locations";
 import { getWhatsAppNumber, buildOrderMessage, buildWhatsAppLink, orderItemOptions } from "@/lib/whatsapp";
+import { issueOrderInvoice } from "@/lib/invoices";
+import { getSiteUrl } from "@/lib/site";
 import type { CheckoutInput } from "@/schemas/checkout";
 
 export class CheckoutError extends Error {
@@ -132,6 +134,7 @@ export async function createWhatsAppOrder(
     total: quote.total,
     deliveryLocation,
     notes: input.notes,
+    currencySymbol: general.currencySymbol,
     maxEncodedLength: 1580,
   });
   const whatsappUrl = buildWhatsAppLink(number, message);
@@ -202,6 +205,9 @@ export async function createWhatsAppOrder(
         ),
       ].map((id) => new Types.ObjectId(id)),
       stockDeducted: false,
+      whatsappOptIn: input.whatsappOptIn,
+      whatsappOptInAt: input.whatsappOptIn ? new Date() : null,
+      whatsappOptInSource: input.whatsappOptIn ? "checkout" : "",
     });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
@@ -241,10 +247,64 @@ export async function createWhatsAppOrder(
   revalidatePath("/cart");
   revalidatePath("/checkout");
 
+  let invoiceUrl: string | null = null;
+  try {
+    const issued = await issueOrderInvoice(String(order._id));
+    invoiceUrl = `${getSiteUrl()}/invoice/${issued.accessToken.token || order.token}`;
+    await recordAudit({
+      action: issued.reissued ? "invoice.reissued" : "invoice.issued",
+      entity: "Invoice",
+      entityId: String(issued.invoice._id ?? ""),
+      summary: `Invoice ${String(issued.invoice.invoiceNumber ?? "")} issued for order ${orderNumber}`,
+      metadata: { orderNumber, revision: issued.invoice.revision ?? 1 },
+    });
+  } catch {
+    // The order is already saved. A failed invoice must not block the handoff.
+    invoiceUrl = null;
+  }
+
+  const finalMessage = buildOrderMessage({
+    template: whatsappOrder.messageTemplate,
+    storeName: general.storeName,
+    customerName: input.customer.name,
+    customerPhone: input.customer.phone,
+    orderNumber,
+    items: quote.validItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+      options: orderItemOptions({ color: item.color, size: item.size }),
+    })),
+    subtotal: quote.subtotal,
+    discount: quote.campaignDiscount + quote.couponDiscount,
+    total: quote.total,
+    deliveryLocation,
+    notes: input.notes,
+    currencySymbol: general.currencySymbol,
+    maxEncodedLength: 1580,
+    invoiceUrl,
+  });
+  await Order.updateOne(
+    { _id: order._id, idempotencyKey: input.idempotencyKey },
+    {
+      $set: {
+        whatsapp: {
+          number,
+          message: finalMessage,
+          clickCount: order.whatsapp.clickCount,
+          lastClickedAt: order.whatsapp.lastClickedAt,
+        },
+      },
+    },
+  );
+
+  const finalWhatsAppUrl = buildWhatsAppLink(number, finalMessage);
+  if (!finalWhatsAppUrl) throw new CheckoutError("Ordering is temporarily unavailable. Please contact us.", 503);
+
   return {
     orderNumber,
-    token,
-    whatsappUrl,
+    token: order.token,
+    whatsappUrl: finalWhatsAppUrl,
     orderId: String(order._id),
     created: true,
   };

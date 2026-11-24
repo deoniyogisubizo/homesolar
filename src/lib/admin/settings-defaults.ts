@@ -36,6 +36,55 @@ export type WhatsAppOrderSettings = {
   customerOrderEmail: boolean;
 };
 
+export type InvoiceBusinessSettings = {
+  businessName: string;
+  tin: string;
+  address: string;
+  phone: string;
+  email: string;
+  logo: string;
+  pricesIncludeVat: boolean;
+  vatRate: number;
+};
+
+export type InvoiceTemplateKey = "order_invoice_customer" | "order_invoice_staff" | "order_delivered_customer";
+
+export type InvoiceTemplateSetting = {
+  metaTemplateName: string;
+  languageCode: string;
+  variableMapping: Record<string, string>;
+};
+
+export type WhatsAppApiSettings = {
+  enabled: boolean;
+};
+
+export type WhatsAppRecipient = {
+  number: string;
+  label: string;
+  events: string[];
+};
+
+export type InvoiceSettings = {
+  business: InvoiceBusinessSettings;
+  terms: string;
+  invoicePrefix: string;
+  reissueOnConfirm: boolean;
+  tokenExpiryDays: number;
+  confirmationMode: "pin_and_scan" | "scan_only";
+  pinAttempts: number;
+  pinLockMinutes: number;
+  geolocationRequired: boolean;
+  templates: Record<InvoiceTemplateKey, InvoiceTemplateSetting>;
+  whatsappApi: WhatsAppApiSettings;
+  recipients: WhatsAppRecipient[];
+  autoSend: {
+    onPlacement: boolean;
+    onConfirmation: boolean;
+    onDelivery: boolean;
+  };
+};
+
 export type NotificationEvent = "orders" | "lowStock" | "messages" | "reviews";
 
 export type NotificationSettings = {
@@ -153,6 +202,7 @@ export type SettingsMap = {
   seo: SeoSettings;
   newsletter: NewsletterSettings;
   whatsappOrder: WhatsAppOrderSettings;
+  invoices: InvoiceSettings;
 };
 
 export const DEFAULT_ORDER_MESSAGE_TEMPLATE = `Hello {{customerName}},
@@ -267,5 +317,45 @@ export const DEFAULT_SETTINGS: SettingsMap = {
     checkoutHelperText:
       "Your order is saved first. WhatsApp opens with the details so our team can confirm delivery.",
     customerOrderEmail: false,
+  },
+  invoices: {
+    business: {
+      businessName: "Solar Home System & Electronic",
+      tin: "",
+      address: "123 Renewable Energy Way, Kigali, RW",
+      phone: "0783110111",
+      email: "info@solarhometech.rw",
+      logo: "/images/brand/logo.png",
+      pricesIncludeVat: false,
+      vatRate: 0,
+    },
+    terms: "Thank you for your order. Delivery and payment terms are confirmed on WhatsApp before dispatch.",
+    invoicePrefix: "INV",
+    reissueOnConfirm: true,
+    tokenExpiryDays: 60,
+    confirmationMode: "pin_and_scan",
+    pinAttempts: 5,
+    pinLockMinutes: 15,
+    geolocationRequired: false,
+    templates: {
+      order_invoice_customer: {
+        metaTemplateName: "order_invoice_customer",
+        languageCode: "en",
+        variableMapping: { customerName: "1", orderNumber: "2", storeName: "3", total: "4", primaryNumber: "5", invoiceUrl: "6" },
+      },
+      order_invoice_staff: {
+        metaTemplateName: "order_invoice_staff",
+        languageCode: "en",
+        variableMapping: { orderNumber: "1", customerName: "2", total: "3", invoiceUrl: "4" },
+      },
+      order_delivered_customer: {
+        metaTemplateName: "order_delivered_customer",
+        languageCode: "en",
+        variableMapping: { customerName: "1", orderNumber: "2", storeName: "3" },
+      },
+    },
+    whatsappApi: { enabled: false },
+    recipients: [{ number: "0783110111", label: "Primary WhatsApp", events: ["new_order", "delivered"] }],
+    autoSend: { onPlacement: true, onConfirmation: true, onDelivery: true },
   },
 };

@@ -120,6 +120,7 @@ export function CheckoutView({
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [restored, setRestored] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
 
   useEffect(() => {
     if (!idempotencyKey.current) {
@@ -274,6 +275,7 @@ export function CheckoutView({
         landmark: values.landmark,
       },
       notes: values.notes,
+      whatsappOptIn,
       honeypot,
     });
 
@@ -605,6 +607,20 @@ export function CheckoutView({
             />
             <FieldError id="notes-error" message={errors.notes} />
           </div>
+          <label className="mt-5 flex items-start gap-2.5 border-t border-line pt-4 text-[12px] leading-5 text-ink">
+            <input
+              type="checkbox"
+              checked={whatsappOptIn}
+              onChange={(event) => setWhatsappOptIn(event.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            <span>
+              Send order updates on WhatsApp
+              <span className="block text-[11px] text-muted">
+                We use your number for order confirmations, delivery updates and invoices. You can ask us to stop at any time.
+              </span>
+            </span>
+          </label>
         </section>
 
         <div className="hidden" aria-hidden="true">

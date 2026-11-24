@@ -50,6 +50,7 @@ const input: CheckoutInput = {
     landmark: "Near the market",
   },
   notes: "Call before delivery",
+  whatsappOptIn: true,
   honeypot: "",
 };
 

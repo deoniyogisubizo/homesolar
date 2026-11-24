@@ -70,6 +70,12 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         permission: "contact:read",
       },
       {
+        label: "Invoices and delivery",
+        href: "/admin/settings/invoices",
+        icon: "file-text",
+        permission: "settings:read",
+      },
+      {
         label: "Notifications",
         href: "/admin/settings/notifications",
         icon: "bell",

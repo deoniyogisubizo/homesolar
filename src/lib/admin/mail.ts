@@ -6,6 +6,8 @@ import { decryptSecret } from "@/lib/admin/crypto";
 import { getSetting } from "@/lib/admin/settings";
 import { EmailTemplate } from "@/models/EmailTemplate";
 import { EmailLog } from "@/models/EmailLog";
+import { generateInvoicePdf } from "@/lib/invoices/pdf";
+import type { InvoiceSnapshot } from "@/lib/invoices";
 import {
   DEFAULT_EMAIL_TEMPLATES,
   emailShell,
@@ -23,6 +25,7 @@ type SendInput = {
   orderId?: string | null;
   sentBy?: string | null;
   retryOf?: string | null;
+  attachments?: Array<{ filename: string; content: Buffer | string; contentType?: string }>;
 };
 
 export type SendResult = { ok: true; messageId: string; logId: string } | { ok: false; error: string; logId: string };
@@ -76,6 +79,15 @@ export async function sendEmail(input: SendInput): Promise<SendResult> {
       replyTo: config.replyTo || undefined,
       subject: input.subject,
       html: input.html,
+      ...(input.attachments?.length
+        ? {
+            attachments: input.attachments.map((attachment) => ({
+              filename: attachment.filename,
+              content: attachment.content,
+              contentType: attachment.contentType,
+            })),
+          }
+        : {}),
     });
 
     const log = await EmailLog.create({
@@ -116,6 +128,14 @@ export async function sendTemplatedEmail(options: {
   sentBy?: string | null;
   retryOf?: string | null;
   unsubscribeUrl?: string | null;
+  invoice?: {
+    invoiceNumber: string;
+    orderNumber: string;
+    snapshot: InvoiceSnapshot;
+    deliveryToken?: string;
+    pin?: string;
+    issuedAt?: Date;
+  } | null;
 }) {
   await connectToDatabase();
   const stored = await EmailTemplate.findOne({ key: options.templateKey, active: true }).lean();
@@ -143,6 +163,25 @@ export async function sendTemplatedEmail(options: {
     unsubscribeUrl: options.unsubscribeUrl ?? undefined,
   });
 
+  let attachments: SendInput["attachments"];
+  if (options.invoice) {
+    const pdfBuffer = await generateInvoicePdf({
+      snapshot: options.invoice.snapshot,
+      invoiceNumber: options.invoice.invoiceNumber,
+      orderNumber: options.invoice.orderNumber,
+      issuedAt: options.invoice.issuedAt ?? new Date(),
+      deliveryToken: options.invoice.deliveryToken,
+      pin: options.invoice.pin,
+      currencySymbol: general.currencySymbol,
+      decimals: ["$", "£", "€"].includes(general.currencySymbol) ? 2 : 0,
+    });
+    attachments = [
+      { filename: `${options.invoice.invoiceNumber}.pdf`, content: pdfBuffer, contentType: "application/pdf" },
+    ];
+  } else {
+    attachments = undefined;
+  }
+
   return sendEmail({
     to: options.to,
     subject,
@@ -151,6 +190,7 @@ export async function sendTemplatedEmail(options: {
     orderId: options.orderId,
     sentBy: options.sentBy,
     retryOf: options.retryOf,
+    attachments,
   });
 }
 

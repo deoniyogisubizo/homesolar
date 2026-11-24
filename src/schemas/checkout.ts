@@ -58,6 +58,7 @@ export const checkoutSchema = z.object({
     landmark: plainText(0, 160, "Landmark is too long."),
   }),
   notes: plainText(0, 800, "Notes are too long."),
+  whatsappOptIn: z.boolean().default(false),
   honeypot: z.string().max(200).default(""),
 });
 

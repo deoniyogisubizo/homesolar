@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getInStockProducts, getInStockAllProducts } from "@/lib/data";
+import { getDynamicInStockProducts, getInStockAllProducts } from "@/lib/data";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,9 +9,16 @@ export async function GET(request: NextRequest) {
 
     let products;
     if (page === 1 && limit >= 100) {
+      // For the initial load with client-side filtering, get a large randomized pool
       products = await getInStockAllProducts();
+      // Shuffle for dynamic display
+      for (let i = products.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [products[i], products[j]] = [products[j], products[i]];
+      }
     } else {
-      products = await getInStockProducts(limit, page);
+      // Use dynamic function for paginated loads
+      products = await getDynamicInStockProducts(limit);
     }
 
     return NextResponse.json({ ok: true, products, page, limit });

@@ -12,9 +12,9 @@ import { getSetting } from "@/lib/admin/settings";
 import {
   getActiveCampaignDisplay,
   getAllCategories,
-  getBestSellingProducts,
-  getFeaturedProducts,
-  getHeroProductsByCategory,
+  getDynamicBestSellingProducts,
+  getDynamicFeaturedProducts,
+  getDynamicHeroProductsByCategory,
   getSiteContent,
 } from "@/lib/data";
 import { buildOrganization, buildStore, buildWebSite } from "@/lib/jsonld/organization";
@@ -38,9 +38,9 @@ export default async function HomePage() {
   const content = await getSiteContent();
   const [allCategories, heroProducts, bestSelling, featured, campaign, store] = await Promise.all([
     getAllCategories(),
-    getHeroProductsByCategory(),
-    getBestSellingProducts(content.bestSelling.mode === "manual" ? content.bestSelling.productIds : []),
-    getFeaturedProducts(content.featured.mode === "manual" ? content.featured.productIds : []),
+    getDynamicHeroProductsByCategory(),
+    getDynamicBestSellingProducts(),
+    getDynamicFeaturedProducts(),
     getActiveCampaignDisplay(),
     getStoreIdentity(),
   ]);

@@ -24,6 +24,7 @@ export type OrderMessageInput = {
   notes?: string | null;
   currencySymbol?: string;
   maxEncodedLength?: number;
+  invoiceUrl?: string | null;
 };
 
 export type TemplateVariables = Record<string, string | number | null | undefined>;
@@ -136,6 +137,7 @@ export function buildOrderMessage(input: OrderMessageInput): string {
     total: money(input.total, symbol),
     deliveryLocation: input.deliveryLocation,
     notes: notesText,
+    invoiceUrl: input.invoiceUrl?.trim() ?? "",
   });
 
   const render = (lines: string[], omitted: number, notesText: string) =>
@@ -169,5 +171,24 @@ export function buildOrderMessage(input: OrderMessageInput): string {
     rendered = compact;
   }
 
-  return rendered;
+  let finalMessage = rendered.replace(/\s+$/, "");
+  const invoiceUrl = input.invoiceUrl?.trim() ?? "";
+  const templateIncludesInvoice = /\{\{\s*invoiceUrl\s*\}\}/.test(input.template);
+  const appendInvoice = Boolean(invoiceUrl) && !templateIncludesInvoice;
+  if (appendInvoice) {
+    finalMessage = finalMessage ? `${finalMessage}\nInvoice: ${invoiceUrl}` : `Invoice: ${invoiceUrl}`;
+  }
+  let finalText = finalMessage.trim();
+  if (encodeURIComponent(finalText).length > maxEncodedLength) {
+    const compact = renderWhatsAppTemplate(input.template, {
+      ...variables([], itemLines.length, ""),
+      items: "",
+    })
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+      .replace(/\s+$/, "");
+    finalText = compact && appendInvoice ? `${compact}\nInvoice: ${invoiceUrl}`.trim() : compact || (appendInvoice ? `Invoice: ${invoiceUrl}` : "");
+  }
+
+  return finalText.trim();
 }

@@ -7,10 +7,9 @@ import type { ContactSettings } from "@/lib/admin/settings-defaults";
 
 interface TopBarProps {
   contact: ContactSettings;
-  brandName: string;
 }
 
-export function TopBar({ contact, brandName }: TopBarProps) {
+export function TopBar({ contact }: TopBarProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileStage, setMobileStage] = useState(0);
 

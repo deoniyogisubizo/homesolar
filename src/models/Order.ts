@@ -41,6 +41,22 @@ export type OrderWhatsApp = {
   lastClickedAt?: Date | null;
 };
 
+export type DeliveryCoordinates = {
+  lat: number;
+  lng: number;
+  accuracy?: number | null;
+};
+
+export type OrderDeliveryProof = {
+  confirmedBy: string;
+  collectedAmount: number;
+  collectedMethod: string;
+  coordinates: DeliveryCoordinates | null;
+  userAgent: string;
+  ip: string;
+  confirmedAt: Date;
+};
+
 export type OrderDocument = {
   orderNumber: string;
   token: string;
@@ -82,6 +98,16 @@ export type OrderDocument = {
   stockDeducted: boolean;
   cancelledAt?: Date | null;
   refundedAt?: Date | null;
+  deliveredAt?: Date | null;
+  deliveryProof: OrderDeliveryProof | null;
+  deliveryCodeHash: string;
+  deliveryCodeVersion: number;
+  deliveryCodeAttempts: number;
+  deliveryCodeLockedUntil?: Date | null;
+  deliveryMismatch: boolean;
+  whatsappOptIn: boolean;
+  whatsappOptInAt?: Date | null;
+  whatsappOptInSource: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -192,6 +218,40 @@ const orderSchema = new Schema<OrderDocument>(
     stockDeducted: { type: Boolean, default: false },
     cancelledAt: { type: Date, default: null },
     refundedAt: { type: Date, default: null },
+    deliveredAt: { type: Date, default: null },
+    deliveryProof: {
+      type: new Schema<OrderDeliveryProof>(
+        {
+          confirmedBy: { type: String, default: "" },
+          collectedAmount: { type: Number, default: 0, min: 0 },
+          collectedMethod: { type: String, default: "" },
+          coordinates: {
+            type: new Schema(
+              {
+                lat: { type: Number, default: 0 },
+                lng: { type: Number, default: 0 },
+                accuracy: { type: Number, default: null },
+              },
+              { _id: false },
+            ),
+            default: null,
+          },
+          userAgent: { type: String, default: "" },
+          ip: { type: String, default: "" },
+          confirmedAt: { type: Date, default: Date.now },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
+    deliveryCodeHash: { type: String, default: "" },
+    deliveryCodeVersion: { type: Number, default: 0, min: 0 },
+    deliveryCodeAttempts: { type: Number, default: 0, min: 0 },
+    deliveryCodeLockedUntil: { type: Date, default: null },
+    deliveryMismatch: { type: Boolean, default: false },
+    whatsappOptIn: { type: Boolean, default: true },
+    whatsappOptInAt: { type: Date, default: null },
+    whatsappOptInSource: { type: String, default: "" },
   },
   { timestamps: true },
 );

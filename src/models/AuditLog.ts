@@ -18,7 +18,15 @@ export type AuditAction =
   | "order.payment_updated"
   | "order.note_added"
   | "order.created"
-  | "order.email_resent";
+  | "order.email_resent"
+  | "invoice.issued"
+  | "invoice.reissued"
+  | "invoice.voided"
+  | "invoice.code_regenerated"
+  | "delivery.confirmed"
+  | "delivery.pin_locked"
+  | "delivery.pin_unlocked"
+  | "invoice.resent";
 
 export type AuditLogDocument = {
   actorId?: Types.ObjectId | null;

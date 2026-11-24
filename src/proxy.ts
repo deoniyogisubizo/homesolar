@@ -26,7 +26,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname !== pathname.toLowerCase()) {
+  const caseSensitivePath = ["/invoice/", "/delivery/", "/api/delivery/"].some((prefix) =>
+    pathname.startsWith(prefix),
+  );
+  if (!caseSensitivePath && pathname !== pathname.toLowerCase()) {
     const url = request.nextUrl.clone();
     url.pathname = pathname.toLowerCase();
     return NextResponse.redirect(url, 308);

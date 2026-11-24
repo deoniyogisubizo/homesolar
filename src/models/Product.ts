@@ -57,6 +57,7 @@ export type ProductDocument = {
   featuredOrder?: number | null;
   bestSellerOrder?: number | null;
   campaignIds: Types.ObjectId[];
+  popularityScore?: number;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -201,6 +202,7 @@ const productSchema = new Schema<ProductDocument>(
     featuredOrder: { type: Number, default: null, index: true },
     bestSellerOrder: { type: Number, default: null, index: true },
     campaignIds: { type: [Schema.Types.ObjectId], ref: "Campaign", default: [] },
+    popularityScore: { type: Number, default: 0, index: true },
   },
   { timestamps: true },
 );

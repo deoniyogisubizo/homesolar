@@ -89,7 +89,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       colors: (product.options?.colors ?? []).map((color) => ({ ...color })),
       sizes: (product.options?.sizes ?? []).map((size) => ({ ...size })),
     },
-    variants: product.variants.map((variant) => ({
+    variants: product.variants?.map((variant) => ({
       sku: variant.sku,
       color: variant.color ?? null,
       size: variant.size ?? null,
@@ -98,8 +98,8 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       stock: variant.stock,
       isDefault: Boolean(variant.isDefault),
     })),
-    features: product.features.map((feature) => ({ ...feature })),
-    specs: product.specs.map((spec) => ({ ...spec })),
+    features: product.features?.map((feature) => ({ ...feature })) ?? [],
+    specs: product.specs?.map((spec) => ({ ...spec })) ?? [],
     detailBanner: product.detailBanner
       ? {
           image: product.detailBanner.image,
@@ -114,9 +114,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           rows: product.sizeGuide.rows.map((row) => ({ ...row })),
         }
       : null,
-    relatedProductIds: product.relatedProductIds.map((entry) => String(entry)),
-    tagsText: product.tags.join(", "),
-    highlightsText: product.highlights.join("\n"),
+    relatedProductIds: product.relatedProductIds?.map((entry) => String(entry)) ?? null,
+    tagsText: product.tags?.join(", ") ?? "",
+    highlightsText: product.highlights?.join("\n") ?? "",
   };
 
   return (

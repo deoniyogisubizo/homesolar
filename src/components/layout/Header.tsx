@@ -50,7 +50,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-50 bg-white">
-      <TopBar contact={contact} brandName={brand.name} />
+      <TopBar contact={contact} />
 
       <div className="container-page lg:hidden">
         <div className="flex h-[66px] items-center justify-between gap-3">

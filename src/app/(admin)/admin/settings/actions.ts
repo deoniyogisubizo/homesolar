@@ -13,6 +13,7 @@ import { sendRawEmail } from "@/lib/admin/mail";
 import {
   contactSettingsSchema,
   generalSettingsSchema,
+  invoiceSettingsSchema,
   newsletterSettingsSchema,
   notificationSettingsSchema,
   seoSettingsSchema,
@@ -22,6 +23,10 @@ import {
   whatsappOrderSettingsSchema,
 } from "@/schemas/settings";
 import type { SettingsMap } from "@/lib/admin/settings-defaults";
+import { getWhatsAppConfig, whatsAppStatus } from "@/lib/whatsapp/config";
+import { getWhatsAppProvider } from "@/lib/whatsapp/provider";
+import { orderedTemplateVariables } from "@/lib/whatsapp/outbox";
+import { normalizePhone } from "@/lib/whatsapp-core";
 
 type SectionKey = keyof SettingsMap;
 
@@ -62,6 +67,7 @@ async function persist<K extends SectionKey>(
       seo: "seo:write",
       newsletter: "newsletter:write",
       whatsappOrder: "contact:write",
+      invoices: "settings:write",
     } as const;
     const session = await requirePermission(permission[key]);
     const parsed = schema.safeParse(input);
@@ -101,6 +107,10 @@ export async function saveShippingSettingsAction(input: unknown) {
 
 export async function saveSeoSettingsAction(input: unknown) {
   return persist("seo", seoSettingsSchema, input, "Updated SEO settings");
+}
+
+export async function saveInvoiceSettingsAction(input: unknown) {
+  return persist("invoices", invoiceSettingsSchema, input, "Updated invoice and delivery settings");
 }
 
 export async function saveNewsletterSettingsAction(input: unknown) {
@@ -175,6 +185,70 @@ export async function saveWhatsAppSettingsAction(input: unknown): Promise<Action
     });
     revalidateStorefront(["settings", "products"]);
     return actionOk(null);
+  });
+}
+
+export async function sendTestWhatsAppAction(
+  input: unknown,
+): Promise<ActionResult<{ messageId: string }>> {
+  return runAdminAction(async () => {
+    await assertSameOrigin();
+    const session = await requirePermission("settings:write");
+    const parsed = z.object({ to: z.string().trim().min(7).max(32) }).safeParse(input);
+    if (!parsed.success) {
+      return actionError("Enter a valid WhatsApp number.", fieldErrorsFromZod(parsed.error));
+    }
+    const to = normalizePhone(parsed.data.to);
+    if (!to) return actionError("Use an international number, for example +250788123456.");
+
+    const config = getWhatsAppConfig();
+    if (!config.enabled) {
+      return actionError("WhatsApp sending is disabled. Enable it in invoice settings first.");
+    }
+    if (!config.configured) {
+      return actionError(
+        `WhatsApp Cloud API is not configured. Missing: ${config.missing.join(", ") || "credentials"}.`,
+      );
+    }
+
+    const invoices = await getSetting("invoices");
+    const template = invoices.templates.order_invoice_customer;
+    const provider = getWhatsAppProvider();
+    const result = await provider.sendTemplate({
+      to,
+      templateName: template.metaTemplateName,
+      languageCode: template.languageCode,
+      variables: orderedTemplateVariables(template.variableMapping, {
+        customerName: "Aline Uwase",
+        customerPhone: to,
+        orderNumber: "SH-000123",
+        storeName: "Homesolar",
+        total: "RWF 250,000",
+        orderTotal: "RWF 250,000",
+        primaryNumber: to,
+        invoiceUrl: `${(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/invoice/test`,
+      }),
+    });
+
+    if (!result.ok) return actionError(result.error);
+
+    await recordAudit({
+      actor: session,
+      action: "send",
+      entity: "whatsapp",
+      entityId: result.messageId,
+      summary: `Sent WhatsApp test message to ${to}`,
+    });
+    return actionOk({ messageId: result.messageId });
+  });
+}
+
+export async function whatsAppStatusAction(): Promise<
+  ActionResult<ReturnType<typeof whatsAppStatus>>
+> {
+  return runAdminAction(async () => {
+    await requirePermission("settings:read");
+    return actionOk(whatsAppStatus());
   });
 }
 

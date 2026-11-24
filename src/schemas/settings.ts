@@ -179,6 +179,63 @@ export const whatsappOrderSettingsSchema = z.object({
   customerOrderEmail: z.boolean(),
 }) satisfies z.ZodType<SettingsMap["whatsappOrder"]>;
 
+const invoiceTemplateSchema = z.object({
+  metaTemplateName: z
+    .string()
+    .trim()
+    .max(120)
+    .regex(/^[a-z0-9_]*$/, "Use lowercase letters, numbers and underscores."),
+  languageCode: z
+    .string()
+    .trim()
+    .max(12)
+    .regex(/^[a-z]{2}(?:_[A-Z]{2})?$/, "Use a language code such as en or en_US."),
+  variableMapping: z.record(z.string().trim().max(60), z.string().trim().max(4)),
+});
+
+const invoiceRecipientSchema = z.object({
+  number: whatsappNumberSchema,
+  label: text(80),
+  events: z.array(z.enum(["new_order", "delivered", "status"])).max(6),
+});
+
+export const invoiceSettingsSchema = z.object({
+  business: z.object({
+    businessName: text(160, 1),
+    tin: text(40),
+    address: text(240),
+    phone: text(40),
+    email: z.union([emailSchema, z.literal("")]),
+    logo: text(500),
+    pricesIncludeVat: z.boolean(),
+    vatRate: z.coerce.number().min(0).max(100),
+  }),
+  terms: text(2000),
+  invoicePrefix: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{2,8}$/, "Use 2 to 8 letters or numbers."),
+  reissueOnConfirm: z.boolean(),
+  tokenExpiryDays: z.coerce.number().int().min(1).max(365),
+  confirmationMode: z.enum(["pin_and_scan", "scan_only"]),
+  pinAttempts: z.coerce.number().int().min(3).max(10),
+  pinLockMinutes: z.coerce.number().int().min(1).max(1440),
+  geolocationRequired: z.boolean(),
+  templates: z.object({
+    order_invoice_customer: invoiceTemplateSchema,
+    order_invoice_staff: invoiceTemplateSchema,
+    order_delivered_customer: invoiceTemplateSchema,
+  }),
+  whatsappApi: z.object({ enabled: z.boolean() }),
+  recipients: z.array(invoiceRecipientSchema).max(10),
+  autoSend: z.object({
+    onPlacement: z.boolean(),
+    onConfirmation: z.boolean(),
+    onDelivery: z.boolean(),
+  }),
+}) satisfies z.ZodType<SettingsMap["invoices"]>;
+
 export const testEmailSchema = z.object({
   to: emailSchema,
 });

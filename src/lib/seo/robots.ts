@@ -14,6 +14,8 @@ export const ROBOTS_DISALLOW = [
   "/account",
   "/order/",
   "/search",
+  "/invoice",
+  "/delivery",
 ] as const;
 
 export function buildRobots(seo: SeoSettings, siteUrl: string): MetadataRoute.Robots {

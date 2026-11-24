@@ -6,6 +6,7 @@ import { guardPage } from "@/lib/admin/page-guard";
 import { getSetting } from "@/lib/admin/settings";
 import { followUpCutoff } from "@/lib/admin/follow-up";
 import { connectToDatabase } from "@/lib/mongodb";
+import { Invoice } from "@/models/Invoice";
 import { Order } from "@/models/Order";
 import {
   ORDER_STATUSES,
@@ -45,6 +46,7 @@ export default async function OrdersPage({
     minTotal?: string;
     maxTotal?: string;
     followUp?: string;
+    invoice?: string;
     page?: string;
     size?: string;
   }>;
@@ -93,6 +95,11 @@ export default async function OrdersPage({
       { couponCode: pattern },
     ];
   }
+  const invoiceFilter = params.invoice === "issued" || params.invoice === "missing" ? params.invoice : "";
+  if (invoiceFilter) {
+    const invoiceOrderIds = await Invoice.distinct("orderId", { status: "issued" });
+    filter._id = invoiceFilter === "issued" ? { $in: invoiceOrderIds } : { $nin: invoiceOrderIds };
+  }
 
   const [orders, total, summary, followUpCount] = await Promise.all([
     Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * pageSize).limit(pageSize).lean(),
@@ -106,6 +113,26 @@ export default async function OrdersPage({
 
   const summaryMap = new Map(summary.map((entry) => [entry._id, entry.count]));
 
+  const invoiceDocs = orders.length
+    ? await Invoice.find({
+        orderId: { $in: orders.map((order) => order._id) },
+        status: "issued",
+      })
+        .sort({ revision: -1 })
+        .select("orderId invoiceNumber revision")
+        .lean()
+    : [];
+  const invoiceByOrder = new Map<string, { invoiceNumber: string; revision: number }>();
+  for (const document of invoiceDocs) {
+    const key = String(document.orderId);
+    if (!invoiceByOrder.has(key)) {
+      invoiceByOrder.set(key, {
+        invoiceNumber: document.invoiceNumber,
+        revision: Number(document.revision ?? 1),
+      });
+    }
+  }
+
   const hasFilters = Boolean(
     params.q ||
       params.status ||
@@ -114,7 +141,8 @@ export default async function OrdersPage({
       params.dateTo ||
       params.minTotal ||
       params.maxTotal ||
-      followUp,
+      followUp ||
+      invoiceFilter,
   );
 
   const rows: AdminTableRow[] = orders.map((order) => ({
@@ -125,6 +153,17 @@ export default async function OrdersPage({
         href: `/admin/orders/${order._id}`,
         sub: order.couponCode ? `Code: ${order.couponCode}` : undefined,
       },
+      invoice: (() => {
+        const invoice = invoiceByOrder.get(String(order._id));
+        if (!invoice) {
+          return { label: "Not issued", tone: "warning" as const };
+        }
+        return {
+          label: invoice.invoiceNumber,
+          tone: "success" as const,
+          sub: invoice.revision > 1 ? `Revision ${invoice.revision}` : undefined,
+        };
+      })(),
       customer: {
         label: order.customer.name,
         sub: order.customer.phone,
@@ -285,6 +324,16 @@ export default async function OrdersPage({
             </select>
           </div>
           <div>
+            <label className="admin-label" htmlFor="invoice">
+              Invoice
+            </label>
+            <select id="invoice" name="invoice" defaultValue={params.invoice ?? ""} className="admin-field w-[150px]">
+              <option value="">All invoices</option>
+              <option value="issued">Issued</option>
+              <option value="missing">Missing</option>
+            </select>
+          </div>
+          <div>
             <label className="admin-label" htmlFor="dateFrom">
               From
             </label>
@@ -357,6 +406,7 @@ export default async function OrdersPage({
         <DataTable
           columns={[
             { key: "orderNumber", header: "Order" },
+            { key: "invoice", header: "Invoice" },
             { key: "created", header: "Placed" },
             { key: "customer", header: "Customer" },
             { key: "channel", header: "Channel" },

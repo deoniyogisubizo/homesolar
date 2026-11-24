@@ -113,6 +113,7 @@ export const TEMPLATE_VARIABLES = [
   "orderTotal",
   "orderItems",
   "orderUrl",
+  "invoiceUrl",
   "trackingInfo",
   "storeName",
   "supportEmail",

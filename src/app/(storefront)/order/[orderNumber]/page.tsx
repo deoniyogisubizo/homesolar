@@ -240,6 +240,19 @@ export default async function OrderConfirmationPage({ params, searchParams }: Pa
           </section>
 
           <section className="border border-line p-6">
+            <h2 className="text-[16px] font-semibold text-ink">Invoice</h2>
+            <p className="mt-2 text-[12px] leading-6 text-muted">
+              The invoice is issued automatically with your order and includes the delivery code.
+            </p>
+            <a
+              href={`/invoice/${order.token}`}
+              className="mt-4 inline-flex h-12 items-center justify-center rounded-[4px] bg-navy px-6 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-brand-deep"
+            >
+              Download invoice
+            </a>
+          </section>
+
+          <section className="border border-line p-6">
             <h2 className="text-[16px] font-semibold text-ink">Order status</h2>
             <div className="mt-4">
               <OrderTimeline

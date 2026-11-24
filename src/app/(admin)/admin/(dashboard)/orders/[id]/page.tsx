@@ -6,9 +6,13 @@ import { PageBody, PageHeader } from "@/components/admin/PageHeader";
 import { StatusBadge, labelize } from "@/components/admin/StatusBadge";
 import { OrderActions } from "@/components/admin/orders/OrderActions";
 import { OrderNotes } from "@/components/admin/orders/OrderNotes";
+import { InvoiceActions } from "@/components/admin/orders/InvoiceActions";
+import { OutboxRetryButton } from "@/components/admin/orders/OutboxRetryButton";
 import { OrderTimeline } from "@/components/order/OrderTimeline";
 import { guardPage } from "@/lib/admin/page-guard";
 import { getSetting } from "@/lib/admin/settings";
+import { getLatestInvoiceByOrderId } from "@/lib/invoices";
+import { outboxMessagesForOrder } from "@/lib/whatsapp/outbox";
 import { isFollowUpDue } from "@/lib/admin/follow-up";
 import { statusTone, paymentStatusTone } from "@/lib/admin/order-status";
 import { connectToDatabase } from "@/lib/mongodb";
@@ -41,6 +45,24 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     ),
   ]);
   if (!order) notFound();
+
+  const [invoice, outboxMessages] = await Promise.all([
+    getLatestInvoiceByOrderId(id),
+    outboxMessagesForOrder(id),
+  ]);
+  const invoiceSnapshot = invoice
+    ? {
+        invoiceNumber: String(invoice.invoiceNumber ?? ""),
+        revision: Number(invoice.revision ?? 1),
+        status: String(invoice.status ?? ""),
+        issuedAt: invoice.issuedAt ? new Date(String(invoice.issuedAt)) : null,
+        amountDue: Number((invoice.totals as { amountDue?: number } | undefined)?.amountDue ?? 0),
+        total: Number((invoice.totals as { total?: number } | undefined)?.total ?? order.total),
+      }
+    : null;
+  const deliveryLocked = Boolean(
+    order.deliveryCodeLockedUntil && new Date(order.deliveryCodeLockedUntil) > new Date(),
+  );
 
   const customerOrders = order.customerId
     ? await Order.find({ customerId: order.customerId })
@@ -321,6 +343,158 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <pre className="mt-3 max-h-[260px] overflow-auto whitespace-pre-wrap rounded-[6px] bg-tile p-3 text-[12px] leading-5 text-ink">
                 {order.whatsapp.message || "No message saved."}
               </pre>
+            </section>
+
+            <section className="rounded-[8px] border border-admin-line bg-white p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-ink">Invoice and delivery code</h2>
+                  {invoiceSnapshot ? (
+                    <p className="mt-1 text-[12px] text-admin-muted">
+                      {invoiceSnapshot.invoiceNumber} · revision {invoiceSnapshot.revision} ·{" "}
+                      {invoiceSnapshot.issuedAt?.toLocaleDateString("en-GB") ?? "—"} ·{" "}
+                      {money(invoiceSnapshot.total, general.currencySymbol)} total ·{" "}
+                      {money(invoiceSnapshot.amountDue, general.currencySymbol)} due
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[12px] text-warning">
+                      No invoice has been issued for this order yet.
+                    </p>
+                  )}
+                </div>
+                <StatusBadge
+                  label={invoiceSnapshot ? (deliveryLocked ? "Code locked" : "Issued") : "Not issued"}
+                  tone={invoiceSnapshot ? (deliveryLocked ? "warning" : "success") : "neutral"}
+                />
+              </div>
+              {order.deliveryMismatch ? (
+                <p className="mt-3 rounded-[6px] border border-warning/30 bg-warning-pale px-3 py-2 text-[12px] text-warning">
+                  The amount collected at delivery does not match the order total. Review the proof below.
+                </p>
+              ) : null}
+              <div className="mt-4">
+                <InvoiceActions
+                  orderId={String(order._id)}
+                  invoiceNumber={invoiceSnapshot?.invoiceNumber ?? null}
+                  hasEmail={Boolean(order.customer.email)}
+                  hasDeliveryCode={Boolean(order.deliveryCodeHash)}
+                  locked={deliveryLocked}
+                  publicToken={order.token}
+                />
+              </div>
+              <p className="mt-3 text-[11px] leading-5 text-admin-muted">
+                The delivery code is only printed on the customer copy. Staff can regenerate it or unlock a
+                locked code. Regenerating invalidates the previously printed customer code.
+              </p>
+            </section>
+
+            {order.status === "delivered" || order.deliveryProof ? (
+              <section className="rounded-[8px] border border-admin-line bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-[14px] font-semibold text-ink">Delivery proof</h2>
+                    <p className="mt-1 text-[12px] text-admin-muted">
+                      {order.deliveredAt
+                        ? `Delivered ${new Date(order.deliveredAt).toLocaleString("en-GB")}`
+                        : "Delivery confirmed"}
+                    </p>
+                  </div>
+                  <StatusBadge
+                    label={order.deliveryMismatch ? "Amount mismatch" : "Delivery confirmed"}
+                    tone={order.deliveryMismatch ? "warning" : "success"}
+                  />
+                </div>
+                {order.deliveryProof ? (
+                  <dl className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                    <div>
+                      <dt className="text-admin-muted">Confirmed by</dt>
+                      <dd className="text-ink">{order.deliveryProof.confirmedBy || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-admin-muted">Collected</dt>
+                      <dd className="text-ink">
+                        {money(order.deliveryProof.collectedAmount, general.currencySymbol)} ·{" "}
+                        {labelize(order.deliveryProof.collectedMethod)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-admin-muted">Location</dt>
+                      <dd className="text-ink">
+                        {order.deliveryProof.coordinates ? (
+                          <a
+                            href={`https://maps.google.com/?q=${order.deliveryProof.coordinates.lat},${order.deliveryProof.coordinates.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline underline-offset-2"
+                          >
+                            {order.deliveryProof.coordinates.lat.toFixed(5)},{" "}
+                            {order.deliveryProof.coordinates.lng.toFixed(5)}
+                          </a>
+                        ) : (
+                          "Not shared"
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-admin-muted">Device</dt>
+                      <dd className="break-all text-ink">{order.deliveryProof.userAgent || "—"}</dd>
+                    </div>
+                  </dl>
+                ) : null}
+              </section>
+            ) : null}
+
+            <section className="rounded-[8px] border border-admin-line bg-white p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-[14px] font-semibold text-ink">WhatsApp messages</h2>
+                  <p className="mt-1 text-[12px] text-admin-muted">
+                    Queued and sent transactional messages. Credentials are read from environment variables.
+                  </p>
+                </div>
+                <StatusBadge label={`${outboxMessages.length} message${outboxMessages.length === 1 ? "" : "s"}`} tone="neutral" />
+              </div>
+              {outboxMessages.length ? (
+                <ul className="mt-4 divide-y divide-admin-line">
+                  {outboxMessages.map((message) => {
+                    const tone =
+                      message.status === "sent"
+                        ? "success"
+                        : message.status === "failed"
+                          ? "danger"
+                          : message.status === "sending"
+                            ? "info"
+                            : "warning";
+                    const canRetry = message.status === "failed" || message.status === "pending";
+                    return (
+                      <li key={String(message._id)} className="py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-[12px] font-medium text-ink">
+                              {message.templateName} → {message.recipient}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-admin-muted">
+                              {labelize(message.event)} · attempts {message.attempts}/{message.maxAttempts}
+                              {message.deliveryStatus ? ` · webhook: ${message.deliveryStatus}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <StatusBadge label={labelize(message.status)} tone={tone} />
+                            {canRetry ? <OutboxRetryButton id={String(message._id)} /> : null}
+                          </div>
+                        </div>
+                        {message.lastError ? (
+                          <p className="mt-1 break-words text-[11px] text-danger">{message.lastError}</p>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="mt-3 text-[12px] text-admin-muted">
+                  No automatic messages queued. Enable WhatsApp sending under Invoices and delivery.
+                </p>
+              )}
             </section>
 
             <section className="rounded-[8px] border border-admin-line bg-white p-5">

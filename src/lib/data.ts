@@ -1,6 +1,6 @@
 "use cache";
 
-import { cacheLife, cacheTag } from "next/cache";
+import { cacheLife, cacheTag, unstable_noStore } from "next/cache";
 import { isValidObjectId, Types, type QueryFilter } from "mongoose";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Category, type CategoryDocument } from "@/models/Category";
@@ -29,6 +29,8 @@ import type {
 
 const HOME_PRODUCT_LIMIT = 6;
 const HERO_SIDE_PRODUCT_LIMIT = 6;
+// Dynamic pool sizes - larger pool for better randomization
+const DYNAMIC_POOL_SIZE = 30;
 const PUBLIC_PRODUCT: QueryFilter<ProductDocument> = {
   publishStatus: { $nin: ["draft", "archived"] },
 };
@@ -279,6 +281,185 @@ export async function getInStockProducts(
     .lean();
 
   return products.map((product) => withPricing(serializeProduct(product as never), context));
+}
+
+/**
+ * Dynamic featured products - randomized on each request
+ * Uses MongoDB $sample for true randomness
+ */
+export async function getDynamicFeaturedProducts(
+  limit = HOME_PRODUCT_LIMIT,
+): Promise<ProductType[]> {
+  // Force no cache - fresh randomization on each request
+  unstable_noStore();
+  cacheTag("products", "dynamic-featured");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+
+  // Use aggregation with $sample for true random selection
+  // Filter: active products, prefer those with featuredOrder set or real images
+  const products = await Product.aggregate<ProductDocument>([
+    { $match: { ...PUBLIC_PRODUCT } },
+    {
+      $addFields: {
+        // Prioritize: has real image > has featuredOrder > higher price > higher stock
+        priority: {
+          $add: [
+            { $cond: [{ $ne: ["$images.0.src", "/images/products/component-placeholder.jpg"] }, 100, 0] },
+            { $cond: [{ $ne: ["$featuredOrder", null] }, 50, 0] },
+            { $cond: [{ $gt: ["$price", 2000] }, 30, 0] },
+            { $cond: [{ $gt: ["$price", 1000] }, 20, 0] },
+            { $cond: [{ $gt: ["$stock", 100] }, 10, 0] },
+          ],
+        },
+      },
+    },
+    { $sort: { priority: -1 } },
+    { $limit: DYNAMIC_POOL_SIZE },
+    { $sample: { size: limit } },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    { $unwind: "$category" },
+  ]).exec();
+
+  return products.map((product) => withPricing(serializeProduct(product as never), context));
+}
+
+/**
+ * Dynamic best selling products - randomized on each request
+ * Balanced across price tiers for variety
+ */
+export async function getDynamicBestSellingProducts(
+  limit = HOME_PRODUCT_LIMIT,
+): Promise<ProductType[]> {
+  unstable_noStore();
+  cacheTag("products", "dynamic-bestseller");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+
+  // Get a diverse pool across price tiers
+  const [budget, midRange, premium] = await Promise.all([
+    Product.aggregate<ProductDocument>([
+      { $match: { ...PUBLIC_PRODUCT, price: { $gte: 500, $lte: 1500 }, stock: { $gte: 50 } } },
+      { $sample: { size: Math.ceil(limit * 0.5) } },
+      { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "category" } },
+      { $unwind: "$category" },
+    ]).exec(),
+    Product.aggregate<ProductDocument>([
+      { $match: { ...PUBLIC_PRODUCT, price: { $gt: 1500, $lte: 3500 }, stock: { $gte: 50 } } },
+      { $sample: { size: Math.ceil(limit * 0.3) } },
+      { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "category" } },
+      { $unwind: "$category" },
+    ]).exec(),
+    Product.aggregate<ProductDocument>([
+      { $match: { ...PUBLIC_PRODUCT, price: { $gt: 3500 }, stock: { $gte: 30 } } },
+      { $sample: { size: Math.ceil(limit * 0.2) } },
+      { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "category" } },
+      { $unwind: "$category" },
+    ]).exec(),
+  ]);
+
+  // Combine and shuffle
+  const combined = [...budget, ...midRange, ...premium];
+  // Fisher-Yates shuffle for true randomization
+  for (let i = combined.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [combined[i], combined[j]] = [combined[j], combined[i]];
+  }
+
+  return combined.slice(0, limit).map((product) => withPricing(serializeProduct(product as never), context));
+}
+
+/**
+ * Dynamic in-stock products - randomized on each request
+ */
+export async function getDynamicInStockProducts(
+  limit = HOME_PRODUCT_LIMIT,
+): Promise<ProductType[]> {
+  unstable_noStore();
+  cacheTag("products", "dynamic-instock");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+
+  const products = await Product.aggregate<ProductDocument>([
+    { $match: { ...PUBLIC_PRODUCT, stock: { $gt: 0 } } },
+    { $sample: { size: limit } },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    { $unwind: "$category" },
+  ]).exec();
+
+  return products.map((product) => withPricing(serializeProduct(product as never), context));
+}
+
+/**
+ * Dynamic hero side products - randomized per category
+ */
+export async function getDynamicHeroProductsByCategory(): Promise<Record<string, HeroProductType[]>> {
+  unstable_noStore();
+  cacheTag("products", "categories", "dynamic-hero");
+
+  await connectToDatabase();
+  const context = await storefrontPricingContext();
+
+  // Get random products per category
+  const products = await Product.aggregate<ProductDocument>([
+    { $match: PUBLIC_PRODUCT },
+    { $sample: { size: DYNAMIC_POOL_SIZE * 3 } }, // Larger pool for category diversity
+    { $sort: { createdAt: -1 } },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    { $unwind: "$category" },
+  ]).exec();
+
+  const grouped: Record<string, HeroProductType[]> = {};
+
+  for (const product of products) {
+    const serialized = withPricing(serializeProduct(product as never), context);
+    const categoryId = serialized.category.id;
+    if (!categoryId) continue;
+
+    const group = (grouped[categoryId] ??= []);
+    if (group.length >= HERO_SIDE_PRODUCT_LIMIT) continue;
+
+    const price = serialized.pricing?.effectivePrice ?? serialized.price;
+    const compareAtPrice =
+      serialized.pricing && serialized.pricing.discountPercent > 0
+        ? serialized.pricing.originalPrice
+        : serialized.compareAtPrice ?? null;
+
+    group.push({
+      id: serialized.id,
+      name: serialized.cardTitle || serialized.name,
+      slug: serialized.slug,
+      image: serialized.image,
+      price,
+      compareAtPrice: compareAtPrice && compareAtPrice > price ? compareAtPrice : null,
+    });
+  }
+
+  return grouped;
 }
 
 export async function getInStockAllProducts(): Promise<ProductType[]> {
